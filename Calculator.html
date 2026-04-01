@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SavageCell Research • Peptide Calculator</title>
+
+  <style>
+    :root{
+      --bg0:#050506; --bg1:#07080a; --panel:#0b0c0f; --panel2:#0f1116;
+      --ink:#f2f2f2; --muted:#a9a9b5; --muted2:#7d7d89; --border:#1c1d24;
+      --red:#d0151f; --red2:#a70e16; --ember:#ff4d4d; --glow: rgba(208,21,31,.22);
+      --shadow: 0 20px 60px rgba(0,0,0,.55); --radius:16px; --max:1500px; --gap:26px;
+      --warn:#ff6b6b;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--ink);
+      background: var(--bg0);
+      line-height:1.45;
+      overflow-x:hidden;
+    }
+    body::before{
+      content:"";
+      position:fixed; inset:0; z-index:-3;
+      background:
+        radial-gradient(1200px 800px at 20% 8%, rgba(255,255,255,.05), transparent 60%),
+        radial-gradient(900px 700px at 85% 10%, rgba(208,21,31,.14), transparent 62%),
+        radial-gradient(1200px 900px at 50% 120%, rgba(208,21,31,.18), transparent 65%),
+        linear-gradient(180deg, #050506 0%, #07080a 45%, rgba(90, 8, 14, 0.58) 100%);
+      pointer-events:none;
+    }
+    body::after{
+      content:"";
+      position:fixed; inset:0; z-index:-2;
+      background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0px, rgba(255,255,255,.02) 1px, transparent 1px, transparent 9px);
+      opacity:.25;
+      pointer-events:none;
+    }
+    img{ max-width:100%; display:block; }
+
+    /* Header banner (match index.html: full-width, never cropped) */
+    .siteHeader{
+      position:sticky; top:0; z-index:60;
+      height:120px; /* mobile */
+      border-bottom:1px solid var(--border);
+      background-color:#000;
+      background-image:
+        linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.62)),
+        url('header.jpg');
+      background-repeat:no-repeat;
+      background-position:center;
+      background-size:contain;
+      backdrop-filter: blur(6px);
+    }
+    @media (min-width: 900px){ .siteHeader{ height: 180px; } }
+
+    .wrap{ max-width:var(--max); margin:0 auto; padding:14px 16px; }
+    .brandbar{ display:flex; gap:14px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .brand{ display:flex; gap:12px; align-items:center; min-width:0; }
+    .brand h1{
+      margin:0; font-weight:950; letter-spacing:.3px;
+      font-size:26px; line-height:1.05;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .brand .sub{
+      font-size:14px; color:var(--muted);
+      letter-spacing:.12em; text-transform:uppercase; margin-top:2px;
+    }
+
+    .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      color:var(--ink);
+      padding:10px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:850;
+      font-size:13px;
+      letter-spacing:.15px;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+      text-decoration:none;
+    }
+    .btn:hover{
+      border-color: rgba(208,21,31,.75);
+      background: rgba(208,21,31,.10);
+      box-shadow: 0 0 0 2px rgba(208,21,31,.10) inset;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      border-color: rgba(208,21,31,.9);
+      background: linear-gradient(180deg, rgba(208,21,31,.28), rgba(208,21,31,.16));
+      box-shadow: 0 0 0 2px rgba(208,21,31,.16) inset, 0 18px 45px rgba(208,21,31,.10);
+    }
+
+    main{ max-width:var(--max); margin:0 auto; padding:28px 20px 130px; }
+
+    .shell{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);
+      gap:var(--gap);
+      align-items:start;
+    }
+    @media (max-width:900px){ .shell{ grid-template-columns:1fr; } }
+
+    .panel{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 22px;
+      background:
+        radial-gradient(900px 600px at 85% 20%, rgba(208,21,31,.15), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panel-inner{ padding:28px; }
+
+    .panel-head{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      margin-bottom:12px;
+    }
+    .panel-head h2{ margin:0; font-size:20px; font-weight:950; letter-spacing:.2px; }
+    .subtxt{ font-size:14px; color:var(--muted); margin-top:2px; }
+
+    .grid{ display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:10px 12px; }
+    .field{ grid-column:span 6; display:flex; flex-direction:column; gap:6px; }
+    .field.short{ grid-column:span 4; }
+    .field.wide{ grid-column:span 12; }
+    @media (max-width:900px){ .field,.field.short,.field.wide{ grid-column:span 12; } }
+
+    label{ font-size:14px; color:var(--muted); }
+
+    input,select{
+      background: rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      color:var(--ink);
+      padding:14px 16px;
+      font-size:18px;
+      outline:none;
+      box-shadow: 0 12px 30px rgba(0,0,0,.20);
+    }
+    
+    /* Dropdown menu (option list) theming */
+    select{
+      color-scheme: dark; /* helps native menus in supported browsers */
+      background-color: rgba(255,255,255,.03);
+    }
+    select option, select optgroup{
+      background-color: #0b0c0f;
+      color: #f2f2f2;
+    }
+    /* Selected/hover states (best-effort across browsers) */
+    select option:checked{
+      background-color: rgba(208,21,31,.22);
+      color:#f2f2f2;
+    }
+input::placeholder{ color: rgba(242,242,242,.55); }
+    input:focus,select:focus{
+      border-color: rgba(208,21,31,.85);
+      box-shadow: 0 0 0 3px rgba(208,21,31,.12), 0 18px 45px rgba(0,0,0,.35);
+    }
+
+    .row{ display:grid; grid-template-columns:minmax(0,1fr) 96px; gap:8px; align-items:center; }
+    .row select{ width:96px; }
+
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .chip{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+      color:var(--ink);
+      padding:12px 16px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+      font-size:14px;
+      letter-spacing:.15px;
+      transition: transform .06s ease, border-color .15s ease, background .15s ease;
+      user-select:none;
+    }
+    .chip:hover{ border-color: rgba(208,21,31,.65); background: rgba(208,21,31,.10); }
+    .chip:active{ transform: translateY(1px); }
+    .chip.ghost{ background: transparent; color:var(--muted); }
+    .chip[aria-pressed="true"]{
+      border-color: rgba(208,21,31,.9);
+      background: rgba(208,21,31,.14);
+      box-shadow: 0 0 0 2px rgba(208,21,31,.12) inset;
+    }
+
+    /* Result */
+    .headline{ font-size:21px; font-weight:950; letter-spacing:-.01em; }
+    .headline .hl{ color: var(--red); }
+    .meta{ margin-top:10px; color:var(--muted); font-size:14px; }
+
+    .stats{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .stat{
+      background: rgba(0,0,0,.25);
+      border:1px dashed rgba(208,21,31,.35);
+      padding:10px;
+      border-radius:16px;
+      font-size:15px;
+    }
+    .stat b{ display:block; font-size:12px; color: rgba(242,242,242,.75); margin-bottom:4px; letter-spacing:.12em; text-transform:uppercase; }
+
+    /* Classic syringe visual */
+    .classic{
+      background: rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:12px;
+      margin-top:12px;
+    }
+    .tube{
+      position:relative;
+      height:40px;
+      border-radius:16px;
+      background: linear-gradient(180deg,#11131a,#0b0c10);
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .fill{
+      position:absolute; left:0; top:0; bottom:0; width:0%;
+      background: linear-gradient(90deg, rgba(208,21,31,1), rgba(208,21,31,.65));
+      border-radius:16px;
+      box-shadow: inset 0 0 12px rgba(255,255,255,.18), 0 0 26px rgba(208,21,31,.30);
+    }
+    .cursor{
+      position:absolute; top:-6px; width:2px;
+      background: rgba(242,242,242,.75);
+      height:40px; border-radius:2px;
+      box-shadow: 0 0 0 2px rgba(208,21,31,.15);
+    }
+    .ticks{ position:relative; height:44px; margin-top:8px; margin-bottom:6px; padding:0 2px; }
+    .tick{ position:absolute; bottom:14px; width:1px; background: rgba(242,242,242,.25); transform:translateX(-0.5px); }
+    .tick.minor{ height:8px; opacity:.55; }
+    .tick.mid{ height:12px; opacity:.8; }
+    .tick.major{ height:16px; opacity:1; background: rgba(242,242,242,.38); }
+    .tick .n{
+      position:absolute; top:18px; left:50%;
+      transform:translateX(-50%);
+      font-size:11px;
+      color: rgba(242,242,242,.65);
+      white-space:nowrap;
+    }
+
+    .warn{ margin-top:10px; color:var(--warn); font-weight:950; font-size:13px; display:none; }
+    .note{ margin-top:10px; color:var(--muted); font-size:12px; }
+
+    .footer{
+      position:fixed; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,.55);
+      border-top:1px solid rgba(255,255,255,.08);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
+    .foot-wrap{
+      max-width:var(--max);
+      margin:auto;
+      padding:10px 16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .small{ font-size:14px; color: rgba(242,242,242,.70); }
+
+    /* Hide number spinners */
+    input[type="number"]{ appearance:textfield; -webkit-appearance:textfield; -moz-appearance:textfield; }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+
+    @media (prefers-reduced-motion: reduce){
+      .btn,.chip{ transition:none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="siteHeader" aria-label="Header banner"></header>
+
+  <main>
+    <div class="wrap">
+      <div class="brandbar">
+        <div class="brand">
+          <div class="actions">
+            <a href="index.html" class="btn">⬅ Back to Catalog</a>
+          </div>
+          <div style="min-width:0">
+            <h1>SavageCell Research</h1>
+            <div class="sub">Peptide Calculator</div>
+          </div>
+        </div>
+</div>
+    </div>
+
+    <section class="shell" aria-label="Calculator">
+      <!-- LEFT -->
+      <section class="panel" aria-label="Vial and dose settings">
+        <div class="panel-inner">
+          <div class="panel-head">
+            <div>
+              <h2>Vial &amp; Dose Settings</h2>
+              <div class="subtxt">Describe your vial, diluent, and the dose you want to pull.</div>
+            </div>
+            <button id="reset" class="chip ghost" type="button">Reset</button>
+          </div>
+
+          <div class="grid">
+            <div class="field short">
+              <label for="amountPerVial">Content per vial</label>
+              <div class="row" style="grid-template-columns:minmax(0,1fr) 96px">
+                <input id="amountPerVial" type="number" min="0" step="0.1" value="5" aria-label="Amount per vial">
+                <select id="vialUnit" aria-label="Vial unit">
+                  <option value="mg" selected>mg</option>
+                  <option value="iu">IU</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field short">
+              <label for="diluentMl">Total diluent added (mL)</label>
+              <input id="diluentMl" type="number" min="0" step="0.1" value="1">
+            </div>
+
+            <div class="field short">
+              <label for="syringeScale">Insulin syringe scale</label>
+              <select id="syringeScale">
+                <option value="30">30 units</option>
+                <option value="50">50 units</option>
+                <option value="100" selected>100 units</option>
+              </select>
+            </div>
+
+            <div class="field wide">
+              <label for="desiredDose">Desired dose</label>
+              <div class="row">
+                <input id="desiredDose" type="number" min="0" step="0.01" value="0.5" class="desired-input">
+                <select id="desiredUnit" data-role="unit" aria-label="Desired dose unit">
+                  <option value="mg" selected>mg</option>
+                  <option value="mcg">mcg</option>
+                  <option value="iu">IU</option>
+                </select>
+              </div>
+
+              <div class="note" id="presetWrap">
+                <div class="small" style="margin-bottom:6px">Quick presets (mg / mcg only)</div>
+                <div class="chips" id="presetMg">
+                  <button class="chip" type="button" data-dose="1" data-unit="mg">1 mg</button>
+                  <button class="chip" type="button" data-dose="2" data-unit="mg">2 mg</button>
+                  <button class="chip" type="button" data-dose="5" data-unit="mg">5 mg</button>
+                  <button class="chip" type="button" data-dose="10" data-unit="mg">10 mg</button>
+                </div>
+                <div class="chips" id="presetMcg" style="display:none">
+                  <button class="chip" type="button" data-dose="100" data-unit="mcg">100 mcg</button>
+                  <button class="chip" type="button" data-dose="250" data-unit="mcg">250 mcg</button>
+                  <button class="chip" type="button" data-dose="500" data-unit="mcg">500 mcg</button>
+                  <button class="chip" type="button" data-dose="1000" data-unit="mcg">1000 mcg</button>
+                </div>
+              </div>
+
+              <p class="note">
+                Assumes a U-100 insulin syringe where <b>1 unit = 0.01 mL</b>. Values update as you type.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT -->
+      <section class="panel" aria-label="Dose result and visual guide">
+        <div class="panel-inner">
+          <div class="panel-head">
+            <div>
+              <h2>Pull this amount</h2>
+              <div class="subtxt">How many units to draw for the dose you specified.</div>
+            </div>
+          </div>
+
+          <div class="headline">
+            For a dose of <span class="hl" id="doseSummary">—</span>, draw to <span class="hl" id="unitsOut">—</span> units.
+          </div>
+          <div class="meta" id="mlOut">—</div>
+
+          <div class="stats">
+            <div class="stat">
+              <b>Units to pull</b>
+              <span id="unitsChip">—</span>
+            </div>
+            <div class="stat">
+              <b>Per syringe unit</b>
+              <span><span id="perUnitVal">—</span> <span id="perUnitUnit">—</span></span>
+              <div class="small" id="altPerUnit" style="margin-top:4px;display:none">≈ <span id="altPerUnitVal">—</span> mcg per unit</div>
+            </div>
+          </div>
+
+          <div class="classic" aria-live="polite">
+            <div class="tube">
+              <div class="fill" id="fill"></div>
+              <div class="cursor" id="cursor" aria-hidden="true"></div>
+            </div>
+            <div class="ticks" id="ticks" aria-hidden="true"></div>
+            <div class="warn" id="warn"></div>
+          </div>
+
+          <div class="note">
+            Visual helper only — not a medical device.
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="foot-wrap">
+      <div class="small">Research use only. Not medical advice.</div>
+      <div class="small">Always verify your label and concentration.</div>
+    </div>
+  </footer>
+
+  <script>
+/* ---------- Classic math with unit handling (mirrors catalog mini-calculator logic) ---------- */
+function classicCalc({amountPerVial, vialUnit='mg', diluentMl, desired, desiredUnit='mg', syringeScale=100}) {
+  const amt   = Number(amountPerVial)||0;
+  const mlD   = Number(diluentMl)||0;
+  const want  = Number(desired)||0;
+  const scale = Number(syringeScale)||100;
+
+  const vUnit = String(vialUnit||'mg').toLowerCase();
+  const dUnit = String(desiredUnit||'mg').toLowerCase();
+
+  let desiredInVial = NaN;
+  let note = '';
+
+  if (vUnit === 'mg') {
+    if (dUnit === 'mg') desiredInVial = want;
+    else if (dUnit === 'mcg') desiredInVial = want/1000;
+    else if (dUnit === 'iu') note = 'Unit mismatch: this vial is in mg, but desired dose is in IU. mg ↔ IU conversion is not possible without a product-specific factor.';
+    else note = 'Unsupported desired dose unit.';
+  } else if (vUnit === 'iu') {
+    if (dUnit === 'iu') desiredInVial = want;
+    else if (dUnit === 'mg' || dUnit === 'mcg') note = 'Unit mismatch: this vial is in IU, but desired dose is in mg/mcg. mg ↔ IU conversion is not possible without a product-specific factor.';
+    else note = 'Unsupported desired dose unit.';
+  } else {
+    note = 'Unsupported vial unit.';
+  }
+
+  // concentration in "vial units" (mg or IU) per mL
+  const perMl = (amt>0 && mlD>0) ? (amt/mlD) : NaN;
+
+  // insulin syringe assumption: 1 unit = 0.01 mL
+  const vialUnitsPerUnit = isFinite(perMl) ? (perMl * 0.01) : NaN;
+
+  // syringe units to pull
+  const syringeUnits = (isFinite(vialUnitsPerUnit) && isFinite(desiredInVial) && desiredInVial>=0)
+    ? (desiredInVial / vialUnitsPerUnit)
+    : NaN;
+
+  const pct = (isFinite(syringeUnits) && scale>0)
+    ? Math.max(0, Math.min(100, (syringeUnits/scale)*100))
+    : 0;
+
+  return { vialUnit:vUnit, desiredUnit:dUnit, vialUnitsPerUnit, units:syringeUnits, unitsPct:pct, syringeScale:scale, note };
+}
+
+/* ---------- UI wiring ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const $ = (id) => document.getElementById(id);
+
+  const el = {
+    amountPerVial: $('amountPerVial'),
+    vialUnit: $('vialUnit'),
+    diluentMl: $('diluentMl'),
+    syringeScale: $('syringeScale'),
+    desiredDose: $('desiredDose'),
+    desiredUnit: $('desiredUnit'),
+    reset: $('reset'),
+
+    doseSummary: $('doseSummary'),
+    unitsOut: $('unitsOut'),
+    mlOut: $('mlOut'),
+    unitsChip: $('unitsChip'),
+    perUnitVal: $('perUnitVal'),
+    perUnitUnit: $('perUnitUnit'),
+    altPerUnit: $('altPerUnit'),
+    altPerUnitVal: $('altPerUnitVal'),
+
+    fill: $('fill'),
+    cursor: $('cursor'),
+    ticks: $('ticks'),
+    warn: $('warn'),
+
+    presetWrap: $('presetWrap'),
+    presetMg: $('presetMg'),
+    presetMcg: $('presetMcg')
+  };
+
+  function buildTicks(maxUnits){
+    // Proper insulin-syringe style ticks:
+    // U-100 + U-50: major every 10, mid at 5, minor every 1
+    // U-30: major every 5 (labeled), minor every 1
+    const max = Math.max(1, Number(maxUnits)||100);
+
+    const majorEvery = (max === 30) ? 5 : 10;
+    const hasMid = (majorEvery === 10);
+    const midEvery = 5;
+
+    el.ticks.innerHTML = '';
+    for (let n = 0; n <= max; n++){
+      const div = document.createElement('div');
+
+      let cls = 'minor';
+      if (n % majorEvery === 0) cls = 'major';
+      else if (hasMid && (n % midEvery === 0)) cls = 'mid';
+
+      div.className = `tick ${cls}`;
+      div.style.left = `${(n / max) * 100}%`;
+
+      // Labels on major ticks
+      if (n % majorEvery === 0){
+        const lab = document.createElement('div');
+        lab.className = 'n';
+        lab.textContent = n;
+        div.appendChild(lab);
+      }
+
+      el.ticks.appendChild(div);
+    }
+  }
+
+  function setWarn(msg){
+    if (msg && String(msg).trim()){
+      el.warn.textContent = `⚠️ ${msg}`;
+      el.warn.style.display = 'block';
+    } else {
+      el.warn.textContent = '';
+      el.warn.style.display = 'none';
+    }
+  }
+
+  function updatePresetVisibility(){
+    const u = String(el.desiredUnit.value||'mg').toLowerCase();
+    const show = (u === 'mg' || u === 'mcg');
+    el.presetWrap.style.display = show ? 'block' : 'none';
+    el.presetMg.style.display = (u === 'mg') ? 'flex' : 'none';
+    el.presetMcg.style.display = (u === 'mcg') ? 'flex' : 'none';
+  }
+
+  function clearPresetPressed(){
+    document.querySelectorAll('[data-dose][data-unit]').forEach(b=>b.setAttribute('aria-pressed','false'));
+  }
+
+  function wirePresets(container){
+    container.querySelectorAll('button[data-dose]').forEach(btn=>{
+      btn.setAttribute('aria-pressed','false');
+      btn.addEventListener('click', ()=>{
+        clearPresetPressed();
+        btn.setAttribute('aria-pressed','true');
+        el.desiredUnit.value = btn.dataset.unit;
+        el.desiredDose.value = btn.dataset.dose;
+        updatePresetVisibility();
+        recalc();
+      });
+    });
+  }
+
+  function convertDoseValue(prevUnit, nextUnit){
+    const v = Number(el.desiredDose.value);
+    if (!isFinite(v) || prevUnit === nextUnit) return;
+
+    // Only convert between mg and mcg automatically (mirrors prior behavior).
+    if (prevUnit === 'mcg' && nextUnit === 'mg') el.desiredDose.value = (v/1000);
+    else if (prevUnit === 'mg' && nextUnit === 'mcg') el.desiredDose.value = (v*1000);
+  }
+
+  function recalc(){
+    const res = classicCalc({
+      amountPerVial: el.amountPerVial.value,
+      vialUnit: el.vialUnit.value,
+      diluentMl: el.diluentMl.value,
+      desired: el.desiredDose.value,
+      desiredUnit: el.desiredUnit.value,
+      syringeScale: el.syringeScale.value
+    });
+
+    const want = Number(el.desiredDose.value);
+    const dUnit = String(el.desiredUnit.value||'mg').toLowerCase();
+    const dUnitLabel = (dUnit==='iu') ? 'IU' : dUnit;
+
+    el.doseSummary.textContent = (isFinite(want) ? want : 0) + ' ' + dUnitLabel;
+
+    el.unitsOut.textContent = isFinite(res.units) ? res.units.toFixed(2) : '—';
+    el.unitsChip.textContent = isFinite(res.units) ? res.units.toFixed(2) + ' units' : '—';
+
+    const ml = isFinite(res.units) ? (res.units * 0.01) : NaN;
+    el.mlOut.textContent = isFinite(ml) ? `≈ ${ml.toFixed(3)} mL (units × 0.01 mL)` : '—';
+
+    el.perUnitVal.textContent = isFinite(res.vialUnitsPerUnit) ? res.vialUnitsPerUnit.toFixed(4) : '—';
+    el.perUnitUnit.textContent = (res.vialUnit === 'iu') ? 'IU / unit' : 'mg / unit';
+
+    // alt mcg per unit only if vial is mg
+    if (res.vialUnit === 'mg' && isFinite(res.vialUnitsPerUnit)){
+      el.altPerUnit.style.display = 'block';
+      el.altPerUnitVal.textContent = (res.vialUnitsPerUnit * 1000).toFixed(2);
+    } else {
+      el.altPerUnit.style.display = 'none';
+      el.altPerUnitVal.textContent = '—';
+    }
+
+    // Visual
+    const pct = Number(res.unitsPct)||0;
+    el.fill.style.width = pct + '%';
+    el.cursor.style.left = `calc(${pct}% - 1px)`;
+
+    // Warnings: unit mismatch and/or syringe overflow
+    const warns = [];
+    if (res.note) warns.push(res.note);
+    if (isFinite(res.units) && res.units > Number(res.syringeScale||0)) {
+      warns.push(`Dose exceeds the selected syringe scale of ${res.syringeScale} units. Consider more diluent, a larger syringe, or a smaller dose.`);
+    }
+    setWarn(warns.join(' '));
+  }
+
+  function reset(){
+    el.amountPerVial.value = '5';
+    el.vialUnit.value = 'mg';
+    el.diluentMl.value = '1';
+    el.syringeScale.value = '100';
+    el.desiredDose.value = '0.5';
+    el.desiredUnit.value = 'mg';
+    clearPresetPressed();
+    updatePresetVisibility();
+    buildTicks(el.syringeScale.value);
+    recalc();
+  }
+
+  // Wire events
+  ['input','change','keyup'].forEach(evt=>{
+    [el.amountPerVial, el.vialUnit, el.diluentMl, el.syringeScale, el.desiredDose, el.desiredUnit].forEach(node=>{
+      node.addEventListener(evt, ()=>{
+        if (node === el.syringeScale) buildTicks(el.syringeScale.value);
+        if (node === el.vialUnit) {
+          // If vial is IU, default desired unit to IU (like catalog mini-calculator)
+          if (String(el.vialUnit.value).toLowerCase() === 'iu' && String(el.desiredUnit.value).toLowerCase() !== 'iu') {
+            el.desiredUnit.value = 'iu';
+            clearPresetPressed();
+            updatePresetVisibility();
+          }
+        }
+        recalc();
+      });
+    });
+  });
+
+  let lastDesiredUnit = el.desiredUnit.value;
+  el.desiredUnit.addEventListener('change', ()=>{
+    convertDoseValue(lastDesiredUnit, el.desiredUnit.value);
+    lastDesiredUnit = el.desiredUnit.value;
+    clearPresetPressed();
+    updatePresetVisibility();
+    recalc();
+  });
+
+  el.reset.addEventListener('click', reset);
+
+  wirePresets(el.presetMg);
+  wirePresets(el.presetMcg);
+
+  updatePresetVisibility();
+  buildTicks(el.syringeScale.value);
+  recalc();
+});
+</script>
+</body>
+</html>
