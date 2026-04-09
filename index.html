@@ -241,6 +241,15 @@
     @media (max-width: 760px){ .actions{ width:100%; justify-content:space-between; } .search{ min-width:100%; } .hero-stats{ grid-template-columns: 1fr 1fr; } }
     @media (max-width: 420px){ .hero-stats{ grid-template-columns: 1fr; } .totals{ grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce){ .btn,.chip,.strength,.card,.drawer{ transition:none !important; } }
+
+    .cart-badge{
+      display:inline-flex; align-items:center; justify-content:center;
+      background: var(--red); color:#fff;
+      font-size:11px; font-weight:900; line-height:1;
+      min-width:18px; height:18px; border-radius:999px;
+      padding:0 5px; margin-left:2px;
+    }
+    .cart-badge.hidden{ display:none; }
   </style>
 </head>
 <body>
@@ -298,7 +307,7 @@
       <div class="actions">
         <a href="Calculator.html" class="btn primary">🧪 Calculator</a>
         <button class="btn" id="authBtn">👤 Sign In</button>
-        <button class="btn" id="openCart" title="Open cart">🛒 Cart</button>
+        <button class="btn" id="openCart" title="Open cart">🛒 Cart<span class="cart-badge hidden" id="cartBadge">0</span></button>
       </div>
     </div>
     <div class="toolbar">
@@ -774,6 +783,9 @@ function renderCart(){
   document.getElementById("subTotal").textContent=money(t.subtotal);
   document.getElementById("grandTotal").textContent=money(t.total);
   document.getElementById("subMeta").textContent=`${t.count} item${t.count===1?"":"s"}`;
+  const badge=document.getElementById("cartBadge");
+  if(t.count>0){ badge.textContent=t.count; badge.classList.remove("hidden"); }
+  else{ badge.classList.add("hidden"); }
 }
 
 /* ══ DRAWER ══ */
