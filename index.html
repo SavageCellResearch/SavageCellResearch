@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>SavageCell Research • Catalog</title>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <style>
     :root{
@@ -41,1249 +42,765 @@
     }
     img{ max-width:100%; display:block; }
 
+    /* ── OVERLAYS ── */
+    .overlay{
+      position:fixed; inset:0; z-index:2000;
+      display:flex; align-items:center; justify-content:center; padding:20px;
+      background: rgba(0,0,0,.88); backdrop-filter: blur(14px);
+    }
+    .overlay.hidden{ display:none; }
+    .overlay-box{
+      width:min(480px,100%);
+      border:1px solid rgba(208,21,31,.55); border-radius:24px;
+      background: radial-gradient(800px 500px at 80% 10%, rgba(208,21,31,.18), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      box-shadow: 0 36px 95px rgba(0,0,0,.80), 0 0 50px rgba(208,21,31,.20);
+      padding:32px 28px; text-align:center;
+    }
+    .overlay-logo{ width:90px; height:90px; object-fit:contain; margin:0 auto 18px; border-radius:18px; }
+    .overlay-title{ margin:0 0 8px; font-size:26px; font-weight:980; letter-spacing:.2px; }
+    .overlay-sub{ color:var(--muted); font-size:14px; margin-bottom:22px; line-height:1.45; }
+    .overlay-err{ color:#ff6b6b; font-size:13px; margin-top:10px; min-height:18px; }
+
+    .f-group{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; text-align:left; }
+    .f-group label{ font-size:13px; color:var(--muted); font-weight:850; }
+    .f-input{
+      background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.14);
+      border-radius:14px; color:var(--ink); padding:13px 16px; font-size:15px; outline:none; width:100%;
+    }
+    .f-input:focus{ border-color:rgba(208,21,31,.85); box-shadow:0 0 0 3px rgba(208,21,31,.12); }
+    .f-input::placeholder{ color:rgba(242,242,242,.40); }
+
+    .btn-full{
+      width:100%; padding:14px; border-radius:14px; border:none; cursor:pointer;
+      font-weight:950; font-size:15px; letter-spacing:.15px;
+      background: linear-gradient(180deg, rgba(208,21,31,.9), rgba(167,14,22,.9));
+      color:#fff; box-shadow: 0 8px 28px rgba(208,21,31,.30);
+      transition: opacity .15s ease, transform .06s ease; margin-top:4px;
+    }
+    .btn-full:hover{ opacity:.88; }
+    .btn-full:active{ transform:translateY(1px); }
+    .btn-full:disabled{ opacity:.45; cursor:not-allowed; }
+
+    .overlay-link{ font-size:13px; color:var(--muted); margin-top:14px; }
+    .overlay-link a{ color:var(--ember); cursor:pointer; text-decoration:none; }
+    .overlay-link a:hover{ text-decoration:underline; }
+
+    .age-btns{ display:flex; gap:12px; margin-top:6px; }
+    .age-btn{
+      flex:1; padding:14px; border-radius:14px; border:1px solid rgba(255,255,255,.14);
+      cursor:pointer; font-weight:950; font-size:16px;
+      background: rgba(255,255,255,.04); color:var(--ink);
+      transition: background .15s, border-color .15s, transform .06s;
+    }
+    .age-btn:hover{ border-color:rgba(208,21,31,.75); background:rgba(208,21,31,.12); }
+    .age-btn:active{ transform:translateY(1px); }
+    .age-btn.yes{ border-color:rgba(208,21,31,.9); background:linear-gradient(180deg, rgba(208,21,31,.30), rgba(208,21,31,.16)); }
+
+    /* ── HEADER ── */
     .siteHeader{
-      position:sticky; top:0; z-index:60;
-      height:96px; /* banner height (mobile) */
-      border-bottom:1px solid var(--border);
-      background-color:#000;
-      background-image:
-        linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.62)),
-        url('header.jpg');
-      background-repeat:no-repeat;
-      background-position:center;
-      background-size:contain; /* never crop */
+      position:sticky; top:0; z-index:60; height:96px;
+      border-bottom:1px solid var(--border); background-color:#000;
+      background-image: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.62)), url('header.jpg');
+      background-repeat:no-repeat; background-position:center; background-size:contain;
       backdrop-filter: blur(6px);
     }
+    @media (min-width: 900px){ .siteHeader{ height: 170px; } }
 
-    @media (min-width: 900px){
-      .siteHeader{ height: 170px; }
-    }
     .wrap{ max-width:var(--max); margin:0 auto; padding:14px 16px; }
     .brandbar{ display:flex; gap:14px; align-items:center; justify-content:space-between; }
     .brand{ display:flex; gap:12px; align-items:center; min-width:0; }
-    .logo{
-      display:none;
-      width:46px; height:46px; border-radius:14px; overflow:hidden;
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow: 0 0 0 2px rgba(208,21,31,.12) inset, 0 12px 28px rgba(0,0,0,.35);
-      background:#000; flex:0 0 auto;
-    }
-    .brand h1{
-      margin:0; font-weight:950; letter-spacing:.3px;
-      font-size:18px; line-height:1.05;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .brand .sub{
-      font-size:12px; color:var(--muted);
-      letter-spacing:.12em; text-transform:uppercase; margin-top:2px;
-    }
+    .logo{ display:none; width:46px; height:46px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,.12); box-shadow: 0 0 0 2px rgba(208,21,31,.12) inset, 0 12px 28px rgba(0,0,0,.35); background:#000; flex:0 0 auto; }
+    .brand h1{ margin:0; font-weight:950; letter-spacing:.3px; font-size:18px; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .brand .sub{ font-size:12px; color:var(--muted); letter-spacing:.12em; text-transform:uppercase; margin-top:2px; }
     .actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 
-    .btn{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      color:var(--ink);
-      padding:11px 14px;
-      border-radius:999px;
-      cursor:pointer;
-      font-weight:850;
-      font-size:13px;
-      letter-spacing:.15px;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
-      user-select:none;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      white-space:nowrap;
-    }
-    .btn:hover{
-      border-color: rgba(208,21,31,.75);
-      background: rgba(208,21,31,.10);
-      box-shadow: 0 0 0 2px rgba(208,21,31,.10) inset;
-    }
+    .btn{ border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color:var(--ink); padding:11px 14px; border-radius:999px; cursor:pointer; font-weight:850; font-size:13px; letter-spacing:.15px; transition: transform .06s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease; user-select:none; display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
+    .btn:hover{ border-color: rgba(208,21,31,.75); background: rgba(208,21,31,.10); box-shadow: 0 0 0 2px rgba(208,21,31,.10) inset; }
     .btn:active{ transform: translateY(1px); }
-    .btn.primary{
-      border-color: rgba(208,21,31,.9);
-      background: linear-gradient(180deg, rgba(208,21,31,.28), rgba(208,21,31,.16));
-      box-shadow: 0 0 0 2px rgba(208,21,31,.16) inset, 0 18px 45px rgba(208,21,31,.10);
-    }
+    .btn.primary{ border-color: rgba(208,21,31,.9); background: linear-gradient(180deg, rgba(208,21,31,.28), rgba(208,21,31,.16)); box-shadow: 0 0 0 2px rgba(208,21,31,.16) inset, 0 18px 45px rgba(208,21,31,.10); }
     .btn.ghost{ background: transparent; }
 
-    .toolbar{
-      display:flex; flex-wrap:wrap; gap:10px;
-      align-items:center; justify-content:space-between; padding-top:10px;
-    }
-    .search{
-      display:flex; align-items:center; gap:10px;
-      min-width: min(560px, 100%); flex: 1 1 auto;
-    }
-    .search input{
-      width:100%;
-      padding:12px 12px;
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:14px;
-      outline:none;
-      font-size:14px;
-      color:var(--ink);
-      background: rgba(255,255,255,.03);
-      box-shadow: 0 12px 30px rgba(0,0,0,.25);
-    }
+    .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding-top:10px; }
+    .search{ display:flex; align-items:center; gap:10px; min-width: min(560px, 100%); flex: 1 1 auto; }
+    .search input{ width:100%; padding:12px 12px; border:1px solid rgba(255,255,255,.12); border-radius:14px; outline:none; font-size:14px; color:var(--ink); background: rgba(255,255,255,.03); box-shadow: 0 12px 30px rgba(0,0,0,.25); }
     .search input::placeholder{ color: rgba(242,242,242,.55); }
-    .search input:focus{
-      border-color: rgba(208,21,31,.85);
-      box-shadow: 0 0 0 3px rgba(208,21,31,.12), 0 18px 45px rgba(0,0,0,.35);
-    }
+    .search input:focus{ border-color: rgba(208,21,31,.85); box-shadow: 0 0 0 3px rgba(208,21,31,.12), 0 18px 45px rgba(0,0,0,.35); }
 
-    .chips{
-      display:flex; flex-wrap:wrap; gap:8px;
-      align-items:center; justify-content:flex-start;
-    }
-    .chip{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.25);
-      color:var(--ink);
-      padding:10px 13px;
-      border-radius:999px;
-      cursor:pointer;
-      font-size:14px;
-      font-weight:850;
-      transition: transform .06s ease, border-color .15s ease, background .15s ease;
-      white-space:nowrap;
-    }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-start; }
+    .chip{ border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.25); color:var(--ink); padding:10px 13px; border-radius:999px; cursor:pointer; font-size:14px; font-weight:850; transition: transform .06s ease, border-color .15s ease, background .15s ease; white-space:nowrap; }
     .chip:hover{ border-color: rgba(208,21,31,.65); }
     .chip:active{ transform: translateY(1px); }
-    .chip[data-active="true"]{
-      border-color: rgba(208,21,31,.9);
-      background: rgba(208,21,31,.14);
-      box-shadow: 0 0 0 2px rgba(208,21,31,.12) inset;
-    }
+    .chip[data-active="true"]{ border-color: rgba(208,21,31,.9); background: rgba(208,21,31,.14); box-shadow: 0 0 0 2px rgba(208,21,31,.12) inset; }
 
-    .sortbar{
-      display:flex; gap:8px; align-items:center;
-      flex-wrap:wrap; justify-content:flex-end; flex: 0 0 auto;
-    }
-    .select{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      color:var(--ink);
-      padding:10px 12px;
-      border-radius:12px;
-      font-weight:800;
-      font-size:13px;
-      outline:none;
-    }
-    /* Theme the native select dropdown (best-effort across browsers) */
-    .select{
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      background-image:
-        linear-gradient(45deg, transparent 50%, rgba(242,242,242,.75) 50%),
-        linear-gradient(135deg, rgba(242,242,242,.75) 50%, transparent 50%);
-      background-position:
-        calc(100% - 18px) calc(50% - 3px),
-        calc(100% - 12px) calc(50% - 3px);
-      background-size: 6px 6px, 6px 6px;
-      background-repeat: no-repeat;
-      padding-right: 34px;
-      box-shadow: 0 12px 30px rgba(0,0,0,.25);
-    }
-    .select:hover{
-      border-color: rgba(208,21,31,.65);
-      box-shadow: 0 0 0 2px rgba(208,21,31,.10) inset, 0 18px 45px rgba(0,0,0,.35);
-    }
-    .select:focus{
-      border-color: rgba(208,21,31,.85);
-      box-shadow: 0 0 0 3px rgba(208,21,31,.12), 0 18px 45px rgba(0,0,0,.35);
-    }
-    /* Options (supported on most browsers; Safari may ignore) */
-    .select option{
-      background: #0b0c0f;
-      color: #f2f2f2;
-    }
-    .select option:checked{
-      background: #1a0b0f;
-      color: #ffffff;
-    }
-
+    .sortbar{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; flex: 0 0 auto; }
+    .select{ border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color:var(--ink); padding:10px 12px; border-radius:12px; font-weight:800; font-size:13px; outline:none; appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, rgba(242,242,242,.75) 50%), linear-gradient(135deg, rgba(242,242,242,.75) 50%, transparent 50%); background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px); background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 34px; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+    .select:hover{ border-color: rgba(208,21,31,.65); }
+    .select:focus{ border-color: rgba(208,21,31,.85); box-shadow: 0 0 0 3px rgba(208,21,31,.12); }
+    .select option{ background: #0b0c0f; color: #f2f2f2; }
+    .select option:checked{ background: #1a0b0f; color: #ffffff; }
 
     main{ max-width:var(--max); margin:0 auto; padding:18px 20px 140px; }
     main > .wrap{ margin-top:12px; }
 
-
-    .hero-card{
-      border:1px solid rgba(255,255,255,.10);
-      background:
-        radial-gradient(800px 500px at 82% 10%, rgba(208,21,31,.16), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      border-radius:24px;
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .hero-inner{
-      padding:18px;
-      display:flex;
-      gap:18px;
-      align-items:center;
-      justify-content:space-between;
-      flex-wrap:wrap;
-    }
+    .hero-card{ border:1px solid rgba(255,255,255,.10); background: radial-gradient(800px 500px at 82% 10%, rgba(208,21,31,.16), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border-radius:24px; box-shadow: var(--shadow); overflow:hidden; }
+    .hero-inner{ padding:18px; display:flex; gap:18px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
     .hero-text{ min-width: min(520px, 100%); flex: 1 1 auto; }
-    .hero-title{
-      margin:0 0 8px;
-      font-size:40px;
-      line-height:1.05;
-      font-weight:980;
-      letter-spacing:.2px;
-    }
-    .hero-desc{
-      margin:0;
-      color: rgba(242,242,242,.86);
-      font-size:14px;
-      max-width: 72ch;
-    }
-
-    .hero-stats{
-      display:grid; gap:10px;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      min-width: min(360px, 100%);
-      flex: 0 1 auto;
-    }
-    .stat{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.25);
-      border-radius:18px;
-      padding:12px;
-    }
-    .stat b{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      letter-spacing:.14em;
-      text-transform:uppercase;
-      margin-bottom:6px;
-    }
+    .hero-title{ margin:0 0 8px; font-size:40px; line-height:1.05; font-weight:980; letter-spacing:.2px; }
+    .hero-desc{ margin:0; color: rgba(242,242,242,.86); font-size:14px; max-width: 72ch; }
+    .hero-stats{ display:grid; gap:10px; grid-template-columns: repeat(2, minmax(0,1fr)); min-width: min(360px, 100%); flex: 0 1 auto; }
+    .stat{ border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.25); border-radius:18px; padding:12px; }
+    .stat b{ display:block; font-size:12px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:6px; }
     .stat .big{ font-weight:980; font-size:16px; letter-spacing:.2px; }
 
-    .grid{
-      margin-top:18px;
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));  /* bigger cards on desktop */
-      gap:var(--gap);
-    }
-    @media (min-width: 1600px){ .grid{ grid-template-columns: repeat(4, minmax(0,1fr)); } } /* optional extra-wide */
+    .grid{ margin-top:18px; display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:var(--gap); }
+    @media (min-width: 1600px){ .grid{ grid-template-columns: repeat(4, minmax(0,1fr)); } }
     @media (max-width: 1080px){ .grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
     @media (max-width: 520px){ .grid{ grid-template-columns: 1fr; } }
 
-    .card{
-      border:1px solid rgba(255,255,255,.10);
-      border-radius: var(--radius);
-      background:
-        radial-gradient(800px 500px at 80% 0%, rgba(208,21,31,.12), transparent 62%),
-        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
-      box-shadow: var(--shadow);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-      min-height: 250px;
-      position:relative;
-      transform: translateZ(0);
-    }
-    .card:hover{
-      border-color: rgba(208,21,31,.55);
-      box-shadow: 0 26px 80px rgba(0,0,0,.70), 0 0 40px rgba(208,21,31,.10);
-    }
-    .card .top{
-      padding:14px 14px 10px;
-      display:flex;
-      flex-direction:column;           /* stack title + price */
-      align-items:flex-start;
-      justify-content:flex-start;
-      gap:10px;
-    }
-    .name{
-      margin:0;
-      font-weight:980;
-      letter-spacing:.25px;
-      font-size:17px;
-      line-height:1.1;
-    }
+    .card{ border:1px solid rgba(255,255,255,.10); border-radius: var(--radius); background: radial-gradient(800px 500px at 80% 0%, rgba(208,21,31,.12), transparent 62%), linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)); box-shadow: var(--shadow); overflow:hidden; display:flex; flex-direction:column; min-height: 250px; position:relative; transform: translateZ(0); }
+    .card:hover{ border-color: rgba(208,21,31,.55); box-shadow: 0 26px 80px rgba(0,0,0,.70), 0 0 40px rgba(208,21,31,.10); }
+    .card .top{ padding:14px 14px 10px; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:10px; }
+    .name{ margin:0; font-weight:980; letter-spacing:.25px; font-size:17px; line-height:1.1; }
     .tagrow{ margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-    .tag{
-      font-size:11px;
-      padding:5px 8px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.22);
-      color: rgba(242,242,242,.88);
-      letter-spacing:.02em;
-      font-weight:850;
-      white-space:nowrap;
-    }
+    .tag{ font-size:11px; padding:5px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.22); color: rgba(242,242,242,.88); letter-spacing:.02em; font-weight:850; white-space:nowrap; }
     .tag.red{ border-color: rgba(208,21,31,.55); background: rgba(208,21,31,.10); }
-    .tag.mono{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-weight:900;
-      color: rgba(242,242,242,.90);
-    }
-
-    .price{ 
-      font-weight:980; 
-      font-size:19px; 
-      white-space:nowrap; 
-      line-height:1; 
-    }
+    .tag.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight:900; }
+    .price{ font-weight:980; font-size:19px; white-space:nowrap; line-height:1; }
     .price small{ font-size:12px; color: var(--muted); font-weight:850; margin-left:6px; }
-
-    .mid{
-      padding:0 14px 12px;
-      color: rgba(242,242,242,.86);
-      font-size:13px;
-      line-height:1.35;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
+    .mid{ padding:0 14px 12px; color: rgba(242,242,242,.86); font-size:13px; line-height:1.35; display:flex; flex-direction:column; gap:10px; }
     .strengths{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .strength{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      color:var(--ink);
-      padding:7px 10px;
-      border-radius:12px;
-      font-size:12px;
-      font-weight:850;
-      cursor:pointer;
-      transition: transform .06s ease, border-color .15s ease, background .15s ease;
-      user-select:none;
-    }
+    .strength{ border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color:var(--ink); padding:7px 10px; border-radius:12px; font-size:12px; font-weight:850; cursor:pointer; transition: transform .06s ease, border-color .15s ease, background .15s ease; user-select:none; }
     .strength:hover{ border-color: rgba(208,21,31,.65); background: rgba(208,21,31,.08); }
-    .strength[data-active="true"]{
-      border-color: rgba(208,21,31,.9);
-      background: rgba(208,21,31,.12);
-      box-shadow: 0 0 0 2px rgba(208,21,31,.10) inset;
-    }
+    .strength[data-active="true"]{ border-color: rgba(208,21,31,.9); background: rgba(208,21,31,.12); box-shadow: 0 0 0 2px rgba(208,21,31,.10) inset; }
 
-    .footer{
-      margin-top:auto;
-      padding:12px 14px 14px;
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content:space-between;
-      border-top:1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.18);
-    }
+    .footer{ margin-top:auto; padding:12px 14px 14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; border-top:1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); }
     .mini{ font-size:12px; color: var(--muted); font-weight:850; }
-    .kbd{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      border:1px solid rgba(255,255,255,.10);
-      padding:3px 6px;
-      border-radius:8px;
-      background: rgba(0,0,0,.25);
-      color: rgba(242,242,242,.88);
-      font-size:11px;
-      font-weight:900;
-    }
+    .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; border:1px solid rgba(255,255,255,.10); padding:3px 6px; border-radius:8px; background: rgba(0,0,0,.25); color: rgba(242,242,242,.88); font-size:11px; font-weight:900; }
 
-    .backdrop{
-      position:fixed; inset:0;
-      display:none;
-      align-items:flex-end;
-      justify-content:center;
-      padding:14px;
-      z-index:1000;
-      background: rgba(0,0,0,.62);
-      backdrop-filter: blur(10px);
-      overflow:auto;
-      -webkit-overflow-scrolling: touch;
-    }
+    .backdrop{ position:fixed; inset:0; display:none; align-items:flex-end; justify-content:center; padding:14px; z-index:1000; background: rgba(0,0,0,.62); backdrop-filter: blur(10px); overflow:auto; -webkit-overflow-scrolling: touch; }
     .backdrop.open{ display:flex; }
-
-    .drawer{
-      width:min(1100px, 100%);
-      border-radius: 22px;
-      overflow:hidden;
-      border:1px solid rgba(208,21,31,.55);
-      box-shadow:
-        0 0 0 2px rgba(208,21,31,.16) inset,
-        0 36px 95px rgba(0,0,0,.75),
-        0 0 50px rgba(208,21,31,.20);
-      background:
-        radial-gradient(900px 600px at 85% 20%, rgba(208,21,31,.15), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      transform: translateY(10px) scale(.99);
-      opacity: 0;
-      transition: transform .18s ease, opacity .18s ease;
-      margin:auto;
-    }
+    .drawer{ width:min(1100px, 100%); border-radius: 22px; overflow:hidden; border:1px solid rgba(208,21,31,.55); box-shadow: 0 0 0 2px rgba(208,21,31,.16) inset, 0 36px 95px rgba(0,0,0,.75), 0 0 50px rgba(208,21,31,.20); background: radial-gradient(900px 600px at 85% 20%, rgba(208,21,31,.15), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); transform: translateY(10px) scale(.99); opacity: 0; transition: transform .18s ease, opacity .18s ease; margin:auto; }
     .backdrop.open .drawer{ transform: translateY(0) scale(1); opacity: 1; }
-
-    .drawer-head{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:12px 14px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.20);
-    }
+    .drawer-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.20); }
     .drawer-head b{ font-size:13px; letter-spacing:.12em; text-transform:uppercase; color: var(--muted); }
-    .x{
-      width:42px;height:42px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      color:var(--ink);
-      cursor:pointer;
-      font-size:18px;
-      font-weight:900;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease;
-    }
+    .x{ width:42px;height:42px; border-radius:14px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color:var(--ink); cursor:pointer; font-size:18px; font-weight:900; transition: transform .06s ease, background .15s ease, border-color .15s ease; }
     .x:hover{ border-color: rgba(208,21,31,.7); background: rgba(208,21,31,.10); }
     .x:active{ transform: translateY(1px); }
-
-    .drawer-body{
-      display:grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap:0;
-      min-height: 380px;
-    }
+    .drawer-body{ display:grid; grid-template-columns: 1.3fr 1fr; gap:0; min-height: 380px; }
     .pane{ padding:16px; }
-    .pane.left{
-      border-right:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.10);
-    }
+    .pane.left{ border-right:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.10); }
     .pane.right{ background: rgba(0,0,0,.06); }
-
     .d-title{ margin:0; font-size:30px; font-weight:980; letter-spacing:.2px; line-height:1.05; }
     .d-meta{ margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
     .d-desc{ margin:12px 0 0; color: rgba(242,242,242,.86); font-size:14px; line-height:1.45; }
-
-    .pill{
-      font-size:12px;
-      font-weight:900;
-      border-radius:999px;
-      padding:7px 10px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.22);
-      color: rgba(242,242,242,.9);
-    }
+    .pill{ font-size:12px; font-weight:900; border-radius:999px; padding:7px 10px; border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.22); color: rgba(242,242,242,.9); }
     .pill.red{ border-color: rgba(208,21,31,.65); background: rgba(208,21,31,.10); }
     .divider{ height:1px; background: rgba(255,255,255,.10); margin:14px 0; }
 
     .cart{ display:flex; flex-direction:column; gap:10px; }
     .cart-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
-    .cart-list{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.20);
-      border-radius:16px;
-      padding:10px;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      max-height: 260px;
-      overflow:auto;
-    }
-    .cart-item{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:14px;
-      padding:9px 10px;
-      background: rgba(255,255,255,.03);
-    }
+    .cart-list{ border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.20); border-radius:16px; padding:10px; display:flex; flex-direction:column; gap:8px; max-height: 180px; overflow:auto; }
+    .cart-item{ display:flex; gap:10px; align-items:center; justify-content:space-between; border:1px solid rgba(255,255,255,.10); border-radius:14px; padding:9px 10px; background: rgba(255,255,255,.03); }
     .cart-item .l{ min-width:0; }
     .cart-item .l b{ display:block; font-size:13px; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .cart-item .l span{ font-size:12px; color: var(--muted); font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cart-item .l span{ font-size:12px; color: var(--muted); font-weight:800; }
     .cart-item .r{ display:flex; gap:8px; align-items:center; }
-    .qty{
-      display:inline-flex; align-items:center; gap:6px;
-      font-size:12px; font-weight:900; color: rgba(242,242,242,.92);
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.22);
-      padding:6px 8px;
-      border-radius:999px;
-    }
-    .iconbtn{
-      width:34px;height:34px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      color:var(--ink);
-      cursor:pointer;
-      font-weight:950;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease;
-    }
+    .qty{ display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:900; color: rgba(242,242,242,.92); border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.22); padding:6px 8px; border-radius:999px; }
+    .iconbtn{ width:34px;height:34px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color:var(--ink); cursor:pointer; font-weight:950; transition: transform .06s ease, background .15s ease, border-color .15s ease; }
     .iconbtn:hover{ border-color: rgba(208,21,31,.65); background: rgba(208,21,31,.08); }
     .iconbtn:active{ transform: translateY(1px); }
-
-    .totals{
-      display:grid; gap:10px;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      margin-top:10px;
-    }
-    .tile{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.20);
-      border-radius:16px;
-      padding:12px;
-    }
-    .tile b{
-      display:block;
-      font-size:12px;
-      color: var(--muted);
-      letter-spacing:.12em;
-      text-transform:uppercase;
-      margin-bottom:6px;
-    }
+    .totals{ display:grid; gap:10px; grid-template-columns: repeat(2, minmax(0,1fr)); margin-top:10px; }
+    .tile{ border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.20); border-radius:16px; padding:12px; }
+    .tile b{ display:block; font-size:12px; color: var(--muted); letter-spacing:.12em; text-transform:uppercase; margin-bottom:6px; }
     .tile .val{ font-weight:980; font-size:16px; letter-spacing:.2px; }
     .tile .sub{ margin-top:4px; font-size:12px; color: var(--muted2); font-weight:800; }
+    .note{ border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03); border-radius:16px; padding:10px 12px; font-size:12px; color: rgba(242,242,242,.80); line-height:1.35; }
+    .note ul{margin:8px 0 0 18px; padding:0;} .note li{margin:6px 0;}
 
-    .note{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      border-radius:16px;
-      padding:10px 12px;
-      font-size:12px;
-      color: rgba(242,242,242,.80);
-      line-height:1.35;
-    }
+    .fulfillment-toggle{ display:flex; gap:8px; margin-top:10px; margin-bottom:4px; }
+    .f-toggle-btn{ flex:1; padding:11px; border-radius:14px; border:1px solid rgba(255,255,255,.14); cursor:pointer; font-weight:950; font-size:13px; background: rgba(255,255,255,.03); color:var(--ink); transition: background .15s, border-color .15s; }
+    .f-toggle-btn[data-active="true"]{ border-color:rgba(208,21,31,.9); background:rgba(208,21,31,.14); box-shadow:0 0 0 2px rgba(208,21,31,.12) inset; }
 
-    .note ul{margin:8px 0 0 18px; padding:0;}
-    .note li{margin:6px 0;}
+    .order-status{ font-size:13px; font-weight:850; padding:10px 14px; border-radius:12px; display:none; margin-top:6px; }
+    .order-status.success{ display:block; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.35); color:#4ade80; }
+    .order-status.error{ display:block; background:rgba(208,21,31,.12); border:1px solid rgba(208,21,31,.35); color:#ff6b6b; }
 
-    .toast{
-      position:fixed; left:50%; bottom:18px; transform: translateX(-50%);
-      background: rgba(0,0,0,.75);
-      border:1px solid rgba(255,255,255,.10);
-      padding:10px 12px;
-      border-radius:999px;
-      box-shadow: 0 18px 45px rgba(0,0,0,.45);
-      font-size:12px; font-weight:900; letter-spacing:.1px;
-      color: rgba(242,242,242,.92);
-      display:none; z-index:1200;
-      backdrop-filter: blur(10px);
-    }
+    .history-list{ display:flex; flex-direction:column; gap:10px; max-height:320px; overflow:auto; margin-top:10px; }
+    .history-item{ border:1px solid rgba(255,255,255,.10); border-radius:14px; padding:12px; background:rgba(255,255,255,.02); }
+    .history-item .h-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px; }
+    .history-item .h-date{ font-size:12px; color:var(--muted); font-weight:850; }
+    .history-item .h-total{ font-weight:980; font-size:14px; }
+    .history-item .h-lines{ font-size:12px; color:rgba(242,242,242,.75); line-height:1.5; }
+    .history-item .h-method{ font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid rgba(208,21,31,.45); background:rgba(208,21,31,.08); color:rgba(242,242,242,.85); display:inline-block; margin-top:6px; }
+
+    .toast{ position:fixed; left:50%; bottom:18px; transform: translateX(-50%); background: rgba(0,0,0,.75); border:1px solid rgba(255,255,255,.10); padding:10px 12px; border-radius:999px; box-shadow: 0 18px 45px rgba(0,0,0,.45); font-size:12px; font-weight:900; letter-spacing:.1px; color: rgba(242,242,242,.92); display:none; z-index:1200; backdrop-filter: blur(10px); }
     .toast.show{ display:block; }
     .sr{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
 
-    @media (max-width: 900px){
-      .drawer-body{ grid-template-columns: 1fr; }
-      .pane.left{ border-right:none; border-bottom:1px solid rgba(255,255,255,.10); }
-      .d-title{ font-size:26px; }
-      .hero-title{ font-size:28px; }
-    }
-    @media (max-width: 760px){
-      .actions{ width:100%; justify-content:space-between; }
-      .search{ min-width:100%; }
-      .hero-stats{ grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 420px){
-      .hero-stats{ grid-template-columns: 1fr; }
-      .totals{ grid-template-columns: 1fr; }
-    }
-    @media (prefers-reduced-motion: reduce){
-      .btn,.chip,.strength,.card,.drawer{ transition:none !important; }
-    }
+    @media (max-width: 900px){ .drawer-body{ grid-template-columns: 1fr; } .pane.left{ border-right:none; border-bottom:1px solid rgba(255,255,255,.10); } .d-title{ font-size:26px; } .hero-title{ font-size:28px; } }
+    @media (max-width: 760px){ .actions{ width:100%; justify-content:space-between; } .search{ min-width:100%; } .hero-stats{ grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 420px){ .hero-stats{ grid-template-columns: 1fr; } .totals{ grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce){ .btn,.chip,.strength,.card,.drawer{ transition:none !important; } }
   </style>
 </head>
-
 <body>
-  <header class="siteHeader" aria-label="Header banner"></header>
 
-  <main>
-    <div class="wrap">
-      <div class="brandbar">
-        <div class="brand">
-          <div class="logo" aria-hidden="true">
-            <img src="header.jpg" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center;" />
-          </div>
-          <div style="min-width:0">
-            <h1>SavageCell Research</h1>
-            <div class="sub">Catalog</div>
-          </div>
-        </div>
-
-        <div class="actions">
-          <a href="Calculator.html" class="btn primary">🧪 Calculator</a>
-          <button class="btn" id="openCart" title="Open cart">🛒 Cart</button>
-        </div>
-      </div>
-
-      <div class="toolbar">
-        <div class="chips" id="chips" aria-label="Category filters"></div>
-
-        <div class="sortbar">
-          <label class="sr" for="sortSel">Sort</label>
-          <select class="select" id="sortSel" aria-label="Sort results">
-            <option value="featured">Sort: Featured</option>
-            <option value="nameAsc">Name: A → Z</option>
-            <option value="nameDesc">Name: Z → A</option>
-            <option value="priceAsc">Price: Low → High</option>
-            <option value="priceDesc">Price: High → Low</option>
-          </select>
-          <button class="btn" id="toggleSections" aria-pressed="false">🧭 Section View</button>
-        </div>
-
-        <div class="search">
-          <input id="search" type="search" placeholder="Search products… (name, strength, price)" />
-        </div>
-      </div>
+<!-- ══ AGE GATE ══ -->
+<div class="overlay" id="ageGate">
+  <div class="overlay-box">
+    <img src="header.jpg" alt="SavageCell Research" class="overlay-logo" />
+    <h2 class="overlay-title">Age Verification Required</h2>
+    <p class="overlay-sub">This website contains products intended for research use by adults only.<br>You must be <strong>21 years of age or older</strong> to enter.</p>
+    <div class="age-btns">
+      <button class="age-btn" id="ageDeny">I am under 21</button>
+      <button class="age-btn yes" id="ageConfirm">I am 21 or older</button>
     </div>
-<section class="hero-card" aria-label="Catalog overview">
-      <div class="hero-inner">
-        <div class="hero-text">
-          <h2 class="hero-title">SavageCell Catalog</h2>
-          <p class="hero-desc">
-            Browse by category, quick filter, and add items to your cart to see a total.
-          </p>
-        </div>
-
-        <div class="hero-stats" aria-label="Quick stats">
-          <div class="stat"><b>Items</b><div class="big" id="statItems">—</div></div>
-          <div class="stat"><b>Categories</b><div class="big" id="statCats">—</div></div>
-          <div class="stat"><b>Lowest price</b><div class="big" id="statLow">—</div></div>
-          <div class="stat"><b>Highest price</b><div class="big" id="statHigh">—</div></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="sectionView" style="display:none; margin-top:18px;"></section>
-    <section class="grid" id="grid" aria-label="Catalog results"></section>
-
-    <div id="empty" style="display:none; margin-top:16px; border:1px dashed rgba(255,255,255,.18); border-radius:16px; padding:22px; background: rgba(0,0,0,.20); color:var(--muted); font-weight:850;">
-      No matches. Try fewer words, or clear filters.
-    </div>
-
-    <div style="margin-top:20px" class="note">
-      <b style="color:#fff">Disclaimer:</b> Research use only. Not medical advice.
-    </div>
-  </main>
-
-  <!-- Cart drawer -->
-  <div class="backdrop" id="cartBackdrop" role="dialog" aria-modal="true" aria-label="Cart">
-    <div class="drawer">
-      <div class="drawer-head">
-        <b>Cart</b>
-        <button class="x" data-close="cartBackdrop" aria-label="Close">✕</button>
-      </div>
-
-      <div class="drawer-body">
-        <div class="pane left">
-          <h3 class="d-title">Your Cart</h3>
-          <div class="d-meta" id="cartMeta"></div>
-          <p class="d-desc">
-            Add items from the catalog to see a running total.
-          </p>
-
-          <div class="divider"></div>
-
-          <div class="cart">
-            <div class="cart-row">
-              <b style="letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-size:12px">Items</b>
-              <button class="btn" id="clearCart">🧹 Clear</button>
-            </div>
-            <div class="cart-list" id="cartList"></div>
-
-            <div class="totals">
-              <div class="tile">
-                <b>Subtotal</b>
-                <div class="val" id="subTotal">$0.00</div>
-                <div class="sub" id="subMeta">—</div>
-              </div>
-              <div class="tile">
-                <b>Total</b>
-                <div class="val" id="grandTotal">$0.00</div>
-                <div class="sub">No online checkout</div>
-              </div>
-            </div>
-
-            <div class="note">
-              <b style="color:#fff">Checkout:</b> DM to checkout. This cart is for pricing only.
-            </div>
-          </div>
-        </div>
-
-        <div class="pane right">
-          <h3 class="d-title" style="font-size:22px">How it works</h3>
-          <div class="divider"></div>
-          <div class="note">
-            1) Filter by category<br>
-            2) Pick strength (if available)<br>
-            3) Tap <b>Add to Cart</b> and view total in the cart
-          </div>
-          <div class="divider"></div>
+    <div class="overlay-err" id="ageErr"></div>
+  </div>
 </div>
+
+<!-- ══ AUTH OVERLAY ══ -->
+<div class="overlay hidden" id="loginOverlay">
+  <div class="overlay-box">
+    <img src="header.jpg" alt="SavageCell Research" class="overlay-logo" />
+    <h2 class="overlay-title" id="authTitle">Welcome Back</h2>
+    <p class="overlay-sub" id="authSub">Sign in to your SavageCell account.</p>
+
+    <div id="loginForm">
+      <div class="f-group"><label>Email</label><input class="f-input" type="email" id="loginEmail" placeholder="you@example.com" /></div>
+      <div class="f-group"><label>Password</label><input class="f-input" type="password" id="loginPass" placeholder="••••••••" /></div>
+      <button class="btn-full" id="loginBtn">Sign In</button>
+      <div class="overlay-err" id="loginErr"></div>
+      <div class="overlay-link">No account? <a id="toSignup">Create one</a> &nbsp;|&nbsp; <a id="closeLogin">Continue as guest</a></div>
+    </div>
+
+    <div id="signupForm" style="display:none">
+      <div class="f-group"><label>Full Name</label><input class="f-input" type="text" id="signupName" placeholder="Your name" /></div>
+      <div class="f-group"><label>Email</label><input class="f-input" type="email" id="signupEmail" placeholder="you@example.com" /></div>
+      <div class="f-group"><label>Password (min 6 chars)</label><input class="f-input" type="password" id="signupPass" placeholder="••••••••" /></div>
+      <button class="btn-full" id="signupBtn">Create Account</button>
+      <div class="overlay-err" id="signupErr"></div>
+      <div class="overlay-link">Already have one? <a id="toLogin">Sign in</a> &nbsp;|&nbsp; <a id="closeSignup">Continue as guest</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header class="siteHeader" aria-label="Header banner"></header>
+
+<main>
+  <div class="wrap">
+    <div class="brandbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"><img src="header.jpg" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center;" /></div>
+        <div style="min-width:0"><h1>SavageCell Research</h1><div class="sub">Catalog</div></div>
       </div>
+      <div class="actions">
+        <a href="Calculator.html" class="btn primary">🧪 Calculator</a>
+        <button class="btn" id="authBtn">👤 Sign In</button>
+        <button class="btn" id="openCart" title="Open cart">🛒 Cart</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="chips" id="chips" aria-label="Category filters"></div>
+      <div class="sortbar">
+        <label class="sr" for="sortSel">Sort</label>
+        <select class="select" id="sortSel">
+          <option value="featured">Sort: Featured</option>
+          <option value="nameAsc">Name: A → Z</option>
+          <option value="nameDesc">Name: Z → A</option>
+          <option value="priceAsc">Price: Low → High</option>
+          <option value="priceDesc">Price: High → Low</option>
+        </select>
+        <button class="btn" id="toggleSections" aria-pressed="false">🧭 Section View</button>
+      </div>
+      <div class="search"><input id="search" type="search" placeholder="Search products… (name, strength, price)" /></div>
     </div>
   </div>
 
-  <!-- Product detail drawer -->
-  <div class="backdrop" id="detailBackdrop" role="dialog" aria-modal="true" aria-label="Product details">
-    <div class="drawer">
-      <div class="drawer-head">
-        <b>Product Details</b>
-        <button class="x" data-close="detailBackdrop" aria-label="Close">✕</button>
+  <section class="hero-card" aria-label="Catalog overview">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <h2 class="hero-title">SavageCell Catalog</h2>
+        <p class="hero-desc">Browse by category, quick filter, and add items to your cart to see a total.</p>
       </div>
+      <div class="hero-stats">
+        <div class="stat"><b>Items</b><div class="big" id="statItems">—</div></div>
+        <div class="stat"><b>Categories</b><div class="big" id="statCats">—</div></div>
+        <div class="stat"><b>Lowest price</b><div class="big" id="statLow">—</div></div>
+        <div class="stat"><b>Highest price</b><div class="big" id="statHigh">—</div></div>
+      </div>
+    </div>
+  </section>
 
-      <div class="drawer-body">
-        <div class="pane left">
-          <h3 class="d-title" id="dTitle">—</h3>
-          <div class="d-meta" id="dMeta"></div>
-          <p class="d-desc" id="dDesc"></p>
+  <section id="sectionView" style="display:none; margin-top:18px;"></section>
+  <section class="grid" id="grid" aria-label="Catalog results"></section>
+  <div id="empty" style="display:none; margin-top:16px; border:1px dashed rgba(255,255,255,.18); border-radius:16px; padding:22px; background: rgba(0,0,0,.20); color:var(--muted); font-weight:850;">No matches. Try fewer words, or clear filters.</div>
+  <div style="margin-top:20px" class="note"><b style="color:#fff">Disclaimer:</b> Research use only. Not medical advice.</div>
+</main>
 
-          <div class="divider"></div>
-
-          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between">
-            <div>
-              <div style="font-weight:980; font-size:22px" id="dPrice">$0.00</div>
-              <div style="color:var(--muted); font-weight:850; font-size:13px" id="dStrength">—</div>
-            </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <button class="btn primary" id="addToCart">🛒 Add to Cart</button>
-              <button class="btn" id="copyLine">📋 Copy line</button>
-            </div>
+<!-- ══ CART DRAWER ══ -->
+<div class="backdrop" id="cartBackdrop" role="dialog" aria-modal="true" aria-label="Cart">
+  <div class="drawer">
+    <div class="drawer-head"><b>Cart</b><button class="x" data-close="cartBackdrop" aria-label="Close">✕</button></div>
+    <div class="drawer-body">
+      <div class="pane left">
+        <h3 class="d-title">Your Cart</h3>
+        <div class="d-meta" id="cartMeta"></div>
+        <div class="divider"></div>
+        <div class="cart">
+          <div class="cart-row">
+            <b style="letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-size:12px">Items</b>
+            <button class="btn" id="clearCart">🧹 Clear</button>
           </div>
-
-          <div class="divider"></div>
-
-          <div class="note" id="dNote"></div>
+          <div class="cart-list" id="cartList"></div>
+          <div class="totals">
+            <div class="tile"><b>Subtotal</b><div class="val" id="subTotal">$0.00</div><div class="sub" id="subMeta">—</div></div>
+            <div class="tile"><b>Total</b><div class="val" id="grandTotal">$0.00</div><div class="sub">+ any shipping</div></div>
+          </div>
         </div>
 
-        <div class="pane right">
-          <h3 class="d-title" style="font-size:22px">Choose strength</h3>
-          <div class="divider"></div>
-          <div class="strengths" id="dStrengths"></div>
+        <div class="divider"></div>
+        <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Fulfillment Method</b>
+        <div class="fulfillment-toggle">
+          <button class="f-toggle-btn" data-active="true" id="pickupBtn" onclick="setFulfillment('pickup')">📦 Local Pickup</button>
+          <button class="f-toggle-btn" data-active="false" id="shipBtn" onclick="setFulfillment('ship')">🚚 Ship to Me</button>
+        </div>
+        <div id="shipAddressWrap" style="display:none; margin-top:8px;">
+          <div class="f-group">
+            <label style="font-size:12px;color:var(--muted);font-weight:850;">Shipping Address</label>
+            <input class="f-input" id="shipAddress" placeholder="Street, City, State, ZIP" style="font-size:13px;padding:10px 14px;" />
+          </div>
+        </div>
 
-          <div class="divider"></div>
-          <div class="note" id="dBulletsWrap" style="display:none;">
-  <b style="color:#fff">More info</b>
-  <ul id="dBullets"></ul>
-</div>
+        <div class="divider"></div>
+        <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Submit Order</b>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+          <div class="f-group" style="margin-bottom:0;">
+            <label style="font-size:12px;color:var(--muted);font-weight:850;">Your Name</label>
+            <input class="f-input" id="orderName" placeholder="Full name" style="font-size:13px;padding:10px 14px;" />
+          </div>
+          <div class="f-group" style="margin-bottom:0;">
+            <label style="font-size:12px;color:var(--muted);font-weight:850;">Your Email</label>
+            <input class="f-input" id="orderEmail" type="email" placeholder="you@example.com" style="font-size:13px;padding:10px 14px;" />
+          </div>
+          <div class="f-group" style="margin-bottom:0;">
+            <label style="font-size:12px;color:var(--muted);font-weight:850;">Notes (optional)</label>
+            <input class="f-input" id="orderNotes" placeholder="Any special instructions…" style="font-size:13px;padding:10px 14px;" />
+          </div>
+          <button class="btn primary" id="submitOrder" style="width:100%;justify-content:center;padding:13px;margin-top:4px;">📨 Send Order to SavageCell</button>
+          <div class="order-status" id="orderStatus"></div>
+        </div>
+      </div>
 
-<div class="divider"></div>
-<div class="note" id="dHeadsUp">
-  <b style="color:#fff">Heads up:</b> This is a catalog only. Checkout is intentionally disabled. DM to checkout.
-</div>
-</div>
+      <div class="pane right">
+        <h3 class="d-title" style="font-size:22px">How it works</h3>
+        <div class="divider"></div>
+        <div class="note">
+          1) Filter by category<br>
+          2) Pick strength (if available)<br>
+          3) Tap <b>Add to Cart</b> and view total<br>
+          4) Choose <b>Pickup</b> or <b>Ship</b><br>
+          5) Hit <b>Send Order</b> — we'll reach out to confirm
+        </div>
+        <div class="divider"></div>
+        <div class="note"><b style="color:#fff">Heads up:</b> Orders go directly to our team. We'll confirm via DM or email.</div>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-  <script>
-    const CATS = [
-      { key:"all", label:"All" },
-      { key:"healing", label:"Healing / Recovery" },
-      { key:"energy", label:"Energy / Mito" },
-      { key:"gh", label:"Growth Hormone" },
-      { key:"cognitive", label:"Cognitive / Neuro" },
-      { key:"aesthetic", label:"Aesthetic / Tanning" },
-      { key:"fatloss", label:"Fat Loss" },
-      { key:"detox", label:"Detox" },
-      { key:"tabs", label:"Tablets / Capsules" },
-      { key:"supplies", label:"Supplies" },
-      { key:"kits", label:"Kits" },
-    ];
-
-    const CAT_DESC = {
-      healing: "Healing & recovery items.",
-      energy: "Energy / mitochondrial support.",
-      gh: "Growth hormone category.",
-      cognitive: "Cognitive / neuro category.",
-      aesthetic: "Aesthetic / tanning items.",
-      fatloss: "Fat loss category.",
-      detox: "Detox category.",
-      tabs: "Tablets / capsules.",
-      supplies: "Supplies.",
-      kits: "Kits / bundles.",
-    };
-
-    // Simple, non-hype, plain-English "more info" bullets shown in View (not for Supplies)
-    const INFO_BY_CAT = {
-      healing: [
-        "Often used to support recovery after training or strain.",
-        "Commonly used for tissue repair support (skin, tendons, joints).",
-        "Popular in recovery stacks for getting back to normal faster."
-      ],
-      energy: [
-        "Often used to support energy and endurance.",
-        "Commonly used for mitochondrial / cellular energy support.",
-        "Used in performance-focused routines and recovery weeks."
-      ],
-      gh: [
-        "Often used to support natural GH signaling.",
-        "Commonly used for recovery, sleep, and body composition support.",
-        "Used in GH-peptide style routines."
-      ],
-      cognitive: [
-        "Often used to support focus, mood, or calm.",
-        "Commonly used for mental clarity and daily performance.",
-        "Used as-needed or in short cycles depending on the item."
-      ],
-      aesthetic: [
-        "Often used for tanning / skin tone support.",
-        "Commonly used to support an even-looking tan.",
-        "Used with basic sun safety and hydration habits."
-      ],
-      fatloss: [
-        "Often used to support appetite control.",
-        "Commonly used for weight-cut / recomposition support.",
-        "Used alongside nutrition and activity habits."
-      ],
-      detox: [
-        "Often used for antioxidant support.",
-        "Commonly used to support overall recovery and wellness.",
-        "Used in wellness-focused routines."
-      ],
-      tabs: [
-        "Oral format (tablets/capsules) for convenience.",
-        "Often used in daily routines when injection isn't needed.",
-        "Strength/count shown on the label for easy planning."
-      ],
-      kits: [
-        "Bundle of common basics for setup.",
-        "Keeps supplies together and simple.",
-        "Good for restock or first-time setup."
-      ],
-    };
-
-    // Optional per-item overrides (only when you want something more specific)
-    const INFO_BY_ID = {
-      // Example:
-      // bpc157: ["...","...","..."]
-    };
-
-    function getInfoBullets(item){
-      if(item.cat === "supplies") return null;
-      return INFO_BY_ID[item.id] || INFO_BY_CAT[item.cat] || null;
-    }
-
-
-    const ITEMS = [
-      { id:"bpc157", name:"BPC-157", cat:"healing", variants:[{strength:"10mg", price:65}] },
-      { id:"tb500", name:"TB-500", cat:"healing", variants:[{strength:"10mg", price:65}] },
-      { id:"bpctb55", name:"BPC/TB", cat:"healing", variants:[{strength:"5mg/5mg", price:65}] },
-      { id:"bpctb1010", name:"BPC/TB", cat:"healing", variants:[{strength:"10/10", price:120}] },
-      { id:"klow50101010", name:"KLOW", cat:"healing", variants:[{strength:"50/10/10/10", price:150}] },
-      { id:"ghkcu100", name:"GHK-Cu", cat:"healing", variants:[{strength:"100mg", price:60}] },
-      { id:"ara290", name:"ARA-290", cat:"healing", variants:[{strength:"10mg", price:50}] },
-      { id:"kpv10", name:"KPV", cat:"healing", variants:[{strength:"10mg", price:60}] },
-      { id:"ll37", name:"LL-37", cat:"healing", variants:[{strength:"5mg", price:35}] },
-      { id:"thymalin", name:"Thymalin", cat:"healing", variants:[{strength:"10mg", price:40}] },
-      { id:"ta1", name:"TA1", cat:"healing", variants:[{strength:"10mg", price:65}] },
-      { id:"cartalax20", name:"Cartalax", cat:"healing", variants:[{strength:"20mg", price:50}] },
-
-      { id:"motsc10", name:"MOTS-C", cat:"energy", variants:[{strength:"10mg", price:40},{strength:"40mg", price:110}] },
-      { id:"nad500", name:"NAD+", cat:"energy", variants:[{strength:"500mg", price:55},{strength:"1000mg", price:90}] },
-      { id:"ss3110", name:"SS-31", cat:"energy", variants:[{strength:"10mg", price:40},{strength:"50mg", price:125}] },
-      { id:"amino1mq50", name:"5-Amino-1MQ", cat:"energy", variants:[{strength:"50mg", price:125}] },
-      { id:"lcarn500", name:"L-Carnitine", cat:"energy", variants:[{strength:"500mg", price:80}] },
-
-      { id:"cjcdac5", name:"CJC-DAC", cat:"gh", variants:[{strength:"5mg", price:65}] },
-      { id:"cjcnodac5", name:"CJC no DAC", cat:"gh", variants:[{strength:"5mg", price:40},{strength:"10mg", price:70}] },
-      { id:"ipam10", name:"Ipamorelin", cat:"gh", variants:[{strength:"10mg", price:70}] },
-      { id:"cjcip55", name:"CJC/IPA", cat:"gh", variants:[{strength:"5/5", price:65}] },
-      { id:"tesa10", name:"Tesamorelin", cat:"gh", variants:[{strength:"10mg", price:70}] },
-      { id:"aod5", name:"AOD-9604", cat:"gh", variants:[{strength:"5mg", price:40}] },
-      { id:"mk677", name:"MK-677", cat:"gh", variants:[{strength:"100ct", price:150},{strength:"50ct", price:85}] },
-      { id:"igflr3", name:"IGF-LR3", cat:"gh", variants:[{strength:"1mg", price:60}] },
-
-      { id:"oxy2", name:"Oxytocin Ace", cat:"cognitive", variants:[{strength:"2mg", price:35}] },
-      { id:"semax", name:"Semax kit", cat:"cognitive", variants:[{strength:"kit", price:55}] },
-      { id:"selank", name:"Selank kit", cat:"cognitive", variants:[{strength:"kit", price:55}] },
-      { id:"pt14110", name:"PT-141", cat:"cognitive", variants:[{strength:"10mg", price:40}] },
-      { id:"pinealon10", name:"Pinealon", cat:"cognitive", variants:[{strength:"10mg", price:40}] },
-      { id:"epith50", name:"Epithalon", cat:"cognitive", variants:[{strength:"50mg", price:100}] },
-      { id:"dsip", name:"DSIP", cat:"cognitive", variants:[{strength:"5mg", price:35},{strength:"15mg", price:90}] },
-      { id:"kiss10", name:"Kisspeptin", cat:"cognitive", variants:[{strength:"10mg", price:50}] },
-
-      { id:"mt1", name:"Melanotan 1 (MT-1)", cat:"aesthetic", variants:[{strength:"—", price:40}] },
-      { id:"mt2", name:"Melanotan 2 (MT-2)", cat:"aesthetic", variants:[{strength:"—", price:40}] },
-
-      { id:"s", name:"Regulator 1", cat:"fatloss", variants:[{strength:"10mg", price:100},{strength:"15mg", price:150}] },
-      { id:"r", name:"Regulator 2", cat:"fatloss", variants:[{strength:"15mg", price:150},{strength:"20mg", price:200},{strength:"30mg", price:300},{strength:"40mg", price:400}] },
-      { id:"t", name:"Regulator 3", cat:"fatloss", variants:[{strength:"15mg", price:150},{strength:"30mg", price:250},{strength:"60mg", price:350}] },
-
-      { id:"glut1500", name:"Glutathione", cat:"detox", variants:[{strength:"1500mg", price:65}] },
-
-      { id:"slupp332", name:"SLU-PP-332", cat:"tabs", variants:[{strength:"100ct", price:200},{strength:"50ct", price:125}] },
-      { id:"teso", name:"Tesofensine", cat:"tabs", variants:[{strength:"100ct", price:250},{strength:"50ct", price:165}] },
-      { id:"aminoTab", name:"5-Amino-1MQ tab", cat:"tabs", variants:[{strength:"50ct", price:100}] },
-
-      { id:"hospira30", name:"Hospira", cat:"supplies", variants:[{strength:"30mL", price:20}] },
-      { id:"syringes", name:"Syringes", cat:"supplies", variants:[{strength:"each", price:0.50}] },
-      { id:"wipes", name:"Alcohol wipes", cat:"supplies", variants:[{strength:"each", price:0.25}] },
-
-      { id:"kitfull", name:"Water + syr + wipes + recon", cat:"kits", variants:[{strength:"kit", price:35}] },
-    ];
-
-    const state = { cat:"all", q:"", sort:"featured", sectionView:false, detail:null, cart:new Map() };
-
-    const money = (n) => `$${Number(n).toFixed(2)}`;
-    const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    function toast(msg){
-      const el = document.getElementById("toast");
-      el.textContent = msg;
-      el.classList.add("show");
-      clearTimeout(toast._t);
-      toast._t = setTimeout(()=> el.classList.remove("show"), 1400);
-    }
-
-    function itemMinPrice(it){ return Math.min(...it.variants.map(v => Number(v.price))); }
-    function itemMaxPrice(it){ return Math.max(...it.variants.map(v => Number(v.price))); }
-    function matches(it, q){
-      if(!q) return true;
-      const hay = [it.name, it.cat, ...it.variants.map(v => `${v.strength} ${v.price}`)].join(" ").toLowerCase();
-      return hay.includes(q.toLowerCase());
-    }
-    function inCat(it, cat){ return (cat === "all") ? true : it.cat === cat; }
-
-    function sortItems(list, sort){
-      const a = [...list];
-      if(sort === "nameAsc") a.sort((x,y)=> x.name.localeCompare(y.name));
-      if(sort === "nameDesc") a.sort((x,y)=> y.name.localeCompare(x.name));
-      if(sort === "priceAsc") a.sort((x,y)=> itemMinPrice(x) - itemMinPrice(y));
-      if(sort === "priceDesc") a.sort((x,y)=> itemMaxPrice(y) - itemMaxPrice(x));
-      if(sort === "featured"){
-        const rank = { healing:1, energy:2, gh:3, cognitive:4, aesthetic:5, fatloss:6, detox:7, tabs:8, supplies:9, kits:10 };
-        a.sort((x,y)=> (rank[x.cat]||99) - (rank[y.cat]||99));
-      }
-      return a;
-    }
-    function getCatLabel(key){ return (CATS.find(c=>c.key===key)||{}).label || key; }
-
-    function buildChips(){
-      const chips = document.getElementById("chips");
-      chips.innerHTML = "";
-
-      CATS.forEach(c => {
-        const b = document.createElement("button");
-        b.className = "chip";
-        b.textContent = c.label;
-        b.dataset.key = c.key;
-        b.dataset.active = String(state.cat === c.key);
-        b.onclick = () => {
-          state.cat = (state.cat === c.key) ? "all" : c.key;
-          syncUI(); render();
-        };
-        chips.appendChild(b);
-      });
-    }
-
-    function syncUI(){
-      document.querySelectorAll(".chip[data-key]").forEach(el=>{ el.dataset.active = String(el.dataset.key === state.cat); });
-      document.getElementById("sortSel").value = state.sort;
-      const t = document.getElementById("toggleSections");
-      t.setAttribute("aria-pressed", String(state.sectionView));
-      t.textContent = state.sectionView ? "🧱 Card Grid" : "🧭 Section View";
-    }
-
-    function scrollToCat(catKey){
-      if(catKey === "all") window.scrollTo({top:0, behavior:"smooth"});
-      const anchor = document.querySelector(`[data-anchor="${catKey}"]`);
-      if(anchor) anchor.scrollIntoView({behavior:"smooth", block:"start"});
-    }
-
-    function render(scrollAfter=false){
-      const grid = document.getElementById("grid");
-      const empty = document.getElementById("empty");
-      const sectionView = document.getElementById("sectionView");
-
-      let list = ITEMS.filter(it => inCat(it, state.cat) && matches(it, state.q));
-      list = sortItems(list, state.sort);
-
-      const cats = new Set(ITEMS.map(i=>i.cat));
-      document.getElementById("statItems").textContent = String(ITEMS.length);
-      document.getElementById("statCats").textContent = String(cats.size);
-      document.getElementById("statLow").textContent = money(Math.min(...ITEMS.map(itemMinPrice)));
-      document.getElementById("statHigh").textContent = money(Math.max(...ITEMS.map(itemMaxPrice)));
-
-      if(state.sectionView){
-        sectionView.style.display = "block";
-        grid.style.display = "none";
-        sectionView.innerHTML = buildSections();
-        empty.style.display = "none";
-        if(scrollAfter) setTimeout(()=> scrollToCat(state.cat), 40);
-        return;
-      }
-
-      sectionView.style.display = "none";
-      grid.style.display = "grid";
-      grid.innerHTML = "";
-      empty.style.display = list.length ? "none" : "block";
-
-      list.forEach(it => {
-        const minP = itemMinPrice(it), maxP = itemMaxPrice(it);
-        const range = (minP === maxP) ? money(minP) : `${money(minP)}–${money(maxP)}`;
-
-        const card = document.createElement("article");
-        card.className = "card";
-        card.innerHTML = `
-          <div class="top">
-            <div style="min-width:0">
-              <h3 class="name">${esc(it.name)}</h3>
-              <div class="tagrow">
-                <span class="tag red">${esc(getCatLabel(it.cat))}</span>
-                <span class="tag mono">${esc(it.id.toUpperCase())}</span>
-              </div>
-            </div>
-            <div class="price">${range}<small>${it.variants.length>1 ? "range" : ""}</small></div>
+<!-- ══ PRODUCT DETAIL DRAWER ══ -->
+<div class="backdrop" id="detailBackdrop" role="dialog" aria-modal="true" aria-label="Product details">
+  <div class="drawer">
+    <div class="drawer-head"><b>Product Details</b><button class="x" data-close="detailBackdrop" aria-label="Close">✕</button></div>
+    <div class="drawer-body">
+      <div class="pane left">
+        <h3 class="d-title" id="dTitle">—</h3>
+        <div class="d-meta" id="dMeta"></div>
+        <p class="d-desc" id="dDesc"></p>
+        <div class="divider"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:980;font-size:22px" id="dPrice">$0.00</div>
+            <div style="color:var(--muted);font-weight:850;font-size:13px" id="dStrength">—</div>
           </div>
-
-          <div class="mid">
-            <div style="color:var(--muted); font-weight:850; font-size:12px; letter-spacing:.12em; text-transform:uppercase;">
-              ${esc(CAT_DESC[it.cat] || "Catalog item")}
-            </div>
-            <div class="strengths">
-              ${it.variants.map((v,i)=> `<button class="strength" data-idx="${i}" title="Select ${esc(v.strength)}">${esc(v.strength)}</button>`).join("")}
-            </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn primary" id="addToCart">🛒 Add to Cart</button>
+            <button class="btn" id="copyLine">📋 Copy line</button>
           </div>
+        </div>
+        <div class="divider"></div>
+        <div class="note" id="dNote"></div>
+      </div>
+      <div class="pane right">
+        <h3 class="d-title" style="font-size:22px">Choose strength</h3>
+        <div class="divider"></div>
+        <div class="strengths" id="dStrengths"></div>
+        <div class="divider"></div>
+        <div class="note" id="dBulletsWrap" style="display:none;"><b style="color:#fff">More info</b><ul id="dBullets"></ul></div>
+        <div class="divider"></div>
+        <div class="note"><b style="color:#fff">Heads up:</b> This is a catalog only. Checkout is intentionally disabled. DM to checkout.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-          <div class="footer">
-            <div class="mini">Tap <span class="kbd">View</span> for details • Add to cart for totals</div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <button class="btn" data-view="1">👁 View</button>
-              <button class="btn primary" data-add="1">🛒 Add</button>
-            </div>
-          </div>
-        `;
+<!-- ══ ACCOUNT DRAWER ══ -->
+<div class="backdrop" id="accountBackdrop" role="dialog" aria-modal="true" aria-label="Account">
+  <div class="drawer">
+    <div class="drawer-head"><b>My Account</b><button class="x" data-close="accountBackdrop" aria-label="Close">✕</button></div>
+    <div class="drawer-body">
+      <div class="pane left">
+        <h3 class="d-title" id="acctName">—</h3>
+        <div class="d-meta"><span class="pill" id="acctEmail">—</span></div>
+        <div class="divider"></div>
+        <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Order History</b>
+        <div class="history-list" id="historyList"></div>
+      </div>
+      <div class="pane right">
+        <h3 class="d-title" style="font-size:22px">Account</h3>
+        <div class="divider"></div>
+        <div class="note">Your cart is automatically saved between visits when you're signed in.</div>
+        <div class="divider"></div>
+        <button class="btn" id="logoutBtn" style="width:100%;justify-content:center;">🚪 Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        it._active = 0;
-        card.querySelectorAll(".strength").forEach(btn => {
-          btn.onclick = () => {
-            card.querySelectorAll(".strength").forEach(b=> b.dataset.active = "false");
-            btn.dataset.active = "true";
-            it._active = Number(btn.dataset.idx);
-            const v = it.variants[it._active];
-            const priceEl = card.querySelector(".price");
-            priceEl.innerHTML = `${money(v.price)}<small>${esc(v.strength)}</small>`;
-          };
-        });
-        const first = card.querySelector(".strength");
-        if(first){ first.dataset.active = "true"; }
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-        card.querySelector('[data-view]').onclick = ()=> openDetail(it, it.variants[it._active || 0]);
-        card.querySelector('[data-add]').onclick = ()=> { addToCart(it, it.variants[it._active || 0]); toast("Added to cart"); };
+<script>
+/* ══════════════════════════════════════════════════════
+   EMAILJS CONFIG — fill in after signing up at emailjs.com
+   Steps:
+   1. Go to https://emailjs.com and create a free account
+   2. Add an Email Service (Gmail recommended) → copy Service ID
+   3. Create an Email Template → copy Template ID
+      Template variables to use: {{customer_name}}, {{customer_email}},
+      {{fulfillment}}, {{cart_lines}}, {{cart_total}}, {{item_count}},
+      {{notes}}, {{order_date}}
+      Set "To Email" in the template to: orders@savagecellresearch.com
+   4. Go to Account → copy your Public Key
+   5. Paste all three values below
+══════════════════════════════════════════════════════ */
+const EMAILJS_PUBLIC_KEY  = "NpGW4nQjcw4FgrQmj";
+const EMAILJS_SERVICE_ID  = "service_b5b0nu9";
+const EMAILJS_TEMPLATE_ID = "template_g3cumml";
 
-        card.addEventListener("mousemove", (e)=>{
-          if(window.matchMedia("(hover:hover) and (pointer:fine)").matches){
-            const r = card.getBoundingClientRect();
-            const x = (e.clientX - r.left) / r.width - 0.5;
-            const y = (e.clientY - r.top) / r.height - 0.5;
-            card.style.transform = `perspective(900px) rotateY(${x*6}deg) rotateX(${y*-6}deg)`;
-          }
-        });
-        card.addEventListener("mouseleave", ()=> card.style.transform = "translateZ(0)");
+/* ══ AUTH ══ */
+const Auth = {
+  _key:"sc_users", _sessionKey:"sc_session",
+  _users(){ try{ return JSON.parse(localStorage.getItem(this._key)||"{}"); }catch(e){return{};} },
+  _save(u){ localStorage.setItem(this._key,JSON.stringify(u)); },
+  current(){ try{ return JSON.parse(localStorage.getItem(this._sessionKey)||"null"); }catch(e){return null;} },
+  signup(name,email,password){
+    if(!name.trim()||!email.trim()||password.length<6) return{ok:false,err:"Please fill all fields (password min 6 chars)."};
+    const users=this._users(), key=email.toLowerCase().trim();
+    if(users[key]) return{ok:false,err:"An account with that email already exists."};
+    users[key]={name:name.trim(),email:key,password,orders:[],savedCart:[]};
+    this._save(users);
+    const user={...users[key]}; delete user.password;
+    localStorage.setItem(this._sessionKey,JSON.stringify(user));
+    return{ok:true,user};
+  },
+  login(email,password){
+    const users=this._users(), key=email.toLowerCase().trim();
+    if(!users[key]) return{ok:false,err:"No account found with that email."};
+    if(users[key].password!==password) return{ok:false,err:"Incorrect password."};
+    const user={...users[key]}; delete user.password;
+    localStorage.setItem(this._sessionKey,JSON.stringify(user));
+    return{ok:true,user};
+  },
+  logout(){ const cur=this.current(); if(cur) this.saveCart(cur.email,cartToArray()); localStorage.removeItem(this._sessionKey); },
+  saveCart(email,arr){ const u=this._users(),k=email.toLowerCase().trim(); if(u[k]){u[k].savedCart=arr;this._save(u);} },
+  loadCart(email){ const u=this._users(); return u[email.toLowerCase().trim()]?.savedCart||[]; },
+  addOrder(email,order){ const u=this._users(),k=email.toLowerCase().trim(); if(u[k]){u[k].orders.unshift(order);this._save(u);} },
+  getOrders(email){ const u=this._users(); return u[email.toLowerCase().trim()]?.orders||[]; }
+};
 
-        grid.appendChild(card);
-      });
+/* ══ AGE GATE ══ */
+const ageGate=document.getElementById("ageGate");
+if(localStorage.getItem("sc_age_verified")==="1") ageGate.classList.add("hidden");
+document.getElementById("ageConfirm").addEventListener("click",()=>{ localStorage.setItem("sc_age_verified","1"); ageGate.classList.add("hidden"); });
+document.getElementById("ageDeny").addEventListener("click",()=>{ document.getElementById("ageErr").textContent="You must be 21+ to access this site."; setTimeout(()=>{ window.location.href="https://www.google.com"; },1200); });
 
-      if(scrollAfter) setTimeout(()=> scrollToCat(state.cat), 40);
-    }
+/* ══ CATALOG DATA ══ */
+const CATS=[
+  {key:"all",label:"All"},{key:"healing",label:"Healing / Recovery"},{key:"energy",label:"Energy / Mito"},
+  {key:"gh",label:"Growth Hormone"},{key:"cognitive",label:"Cognitive / Neuro"},{key:"aesthetic",label:"Aesthetic / Tanning"},
+  {key:"fatloss",label:"Fat Loss / GLP"},{key:"detox",label:"Detox"},{key:"tabs",label:"Tablets / Capsules"},
+  {key:"supplies",label:"Supplies"},{key:"kits",label:"Kits"},
+];
+const CAT_DESC={healing:"Healing & recovery items.",energy:"Energy / mitochondrial support.",gh:"Growth hormone category.",cognitive:"Cognitive / neuro category.",aesthetic:"Aesthetic / tanning items.",fatloss:"Fat loss / GLP category.",detox:"Detox category.",tabs:"Tablets / capsules.",supplies:"Supplies.",kits:"Kits / bundles."};
+const INFO_BY_CAT={healing:["Often used to support recovery after training or strain.","Commonly used for tissue repair support (skin, tendons, joints).","Popular in recovery stacks for getting back to normal faster."],energy:["Often used to support energy and endurance.","Commonly used for mitochondrial / cellular energy support.","Used in performance-focused routines and recovery weeks."],gh:["Often used to support natural GH signaling.","Commonly used for recovery, sleep, and body composition support.","Used in GH-peptide style routines."],cognitive:["Often used to support focus, mood, or calm.","Commonly used for mental clarity and daily performance.","Used as-needed or in short cycles depending on the item."],aesthetic:["Often used for tanning / skin tone support.","Commonly used to support an even-looking tan.","Used with basic sun safety and hydration habits."],fatloss:["Often used to support appetite control.","Commonly used for weight-cut / recomposition support.","Used alongside nutrition and activity habits."],detox:["Often used for antioxidant support.","Commonly used to support overall recovery and wellness.","Used in wellness-focused routines."],tabs:["Oral format (tablets/capsules) for convenience.","Often used in daily routines when injection isn't needed.","Strength/count shown on the label for easy planning."],kits:["Bundle of common basics for setup.","Keeps supplies together and simple.","Good for restock or first-time setup."]};
+const INFO_BY_ID={};
+function getInfoBullets(item){ if(item.cat==="supplies") return null; return INFO_BY_ID[item.id]||INFO_BY_CAT[item.cat]||null; }
 
-    function buildSections(){
-      const order = ["healing","energy","gh","cognitive","aesthetic","fatloss","detox","tabs","supplies","kits"];
-      return order.map(catKey => {
-        if(state.cat !== "all" && state.cat !== catKey) return "";
-        const group = ITEMS.filter(it => it.cat===catKey && matches(it, state.q));
-        const rows = group.map(it=>{
-          const lines = it.variants.map(vv => `
-            <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-              <div style="min-width:0">
-                <b style="font-weight:980">${esc(it.name)}</b>
-                <span style="color:var(--muted);font-weight:850"> • ${esc(vv.strength)}</span>
-              </div>
-              <div style="font-weight:980">${money(vv.price)}</div>
-            </div>
-          `).join("");
-          return `<div class="tile" style="padding:12px; border-radius:18px">${lines}</div>`;
-        }).join("");
+const ITEMS=[
+  {id:"bpc157",name:"BPC-157",cat:"healing",variants:[{strength:"10mg",price:65}]},
+  {id:"tb500",name:"TB-500",cat:"healing",variants:[{strength:"10mg",price:65}]},
+  {id:"bpctb55",name:"BPC/TB",cat:"healing",variants:[{strength:"5mg/5mg",price:65}]},
+  {id:"bpctb1010",name:"BPC/TB",cat:"healing",variants:[{strength:"10/10",price:120}]},
+  {id:"klow50101010",name:"KLOW",cat:"healing",variants:[{strength:"50/10/10/10",price:150}]},
+  {id:"ghkcu100",name:"GHK-Cu",cat:"healing",variants:[{strength:"100mg",price:60}]},
+  {id:"ara290",name:"ARA-290",cat:"healing",variants:[{strength:"10mg",price:50}]},
+  {id:"kpv10",name:"KPV",cat:"healing",variants:[{strength:"10mg",price:60}]},
+  {id:"ll37",name:"LL-37",cat:"healing",variants:[{strength:"5mg",price:35}]},
+  {id:"thymalin",name:"Thymalin",cat:"healing",variants:[{strength:"10mg",price:40}]},
+  {id:"ta1",name:"TA1",cat:"healing",variants:[{strength:"10mg",price:65}]},
+  {id:"cartalax20",name:"Cartalax",cat:"healing",variants:[{strength:"20mg",price:50}]},
+  {id:"motsc10",name:"MOTS-C",cat:"energy",variants:[{strength:"10mg",price:40},{strength:"40mg",price:110}]},
+  {id:"nad500",name:"NAD+",cat:"energy",variants:[{strength:"500mg",price:55},{strength:"1000mg",price:90}]},
+  {id:"ss3110",name:"SS-31",cat:"energy",variants:[{strength:"10mg",price:40},{strength:"50mg",price:125}]},
+  {id:"amino1mq50",name:"5-Amino-1MQ",cat:"energy",variants:[{strength:"50mg",price:125}]},
+  {id:"lcarn500",name:"L-Carnitine",cat:"energy",variants:[{strength:"500mg",price:80}]},
+  {id:"cjcdac5",name:"CJC-DAC",cat:"gh",variants:[{strength:"5mg",price:65}]},
+  {id:"cjcnodac5",name:"CJC no DAC",cat:"gh",variants:[{strength:"5mg",price:40},{strength:"10mg",price:70}]},
+  {id:"ipam10",name:"Ipamorelin",cat:"gh",variants:[{strength:"10mg",price:70}]},
+  {id:"cjcip55",name:"CJC/IPA",cat:"gh",variants:[{strength:"5/5",price:65}]},
+  {id:"tesa10",name:"Tesamorelin",cat:"gh",variants:[{strength:"10mg",price:70}]},
+  {id:"aod5",name:"AOD-9604",cat:"gh",variants:[{strength:"5mg",price:40}]},
+  {id:"mk677",name:"MK-677",cat:"gh",variants:[{strength:"100ct",price:150},{strength:"50ct",price:85}]},
+  {id:"igflr3",name:"IGF-LR3",cat:"gh",variants:[{strength:"1mg",price:60}]},
+  {id:"oxy2",name:"Oxytocin Ace",cat:"cognitive",variants:[{strength:"2mg",price:35}]},
+  {id:"semax",name:"Semax kit",cat:"cognitive",variants:[{strength:"kit",price:55}]},
+  {id:"selank",name:"Selank kit",cat:"cognitive",variants:[{strength:"kit",price:55}]},
+  {id:"pt14110",name:"PT-141",cat:"cognitive",variants:[{strength:"10mg",price:40}]},
+  {id:"pinealon10",name:"Pinealon",cat:"cognitive",variants:[{strength:"10mg",price:40}]},
+  {id:"epith50",name:"Epithalon",cat:"cognitive",variants:[{strength:"50mg",price:100}]},
+  {id:"dsip",name:"DSIP",cat:"cognitive",variants:[{strength:"5mg",price:35},{strength:"15mg",price:90}]},
+  {id:"kiss10",name:"Kisspeptin",cat:"cognitive",variants:[{strength:"10mg",price:50}]},
+  {id:"mt1",name:"Melanotan 1 (MT-1)",cat:"aesthetic",variants:[{strength:"—",price:40}]},
+  {id:"mt2",name:"Melanotan 2 (MT-2)",cat:"aesthetic",variants:[{strength:"—",price:40}]},
+  {id:"sema",name:"Semaglutide",cat:"fatloss",variants:[{strength:"10mg",price:100},{strength:"15mg",price:150}]},
+  {id:"reta",name:"Retatrutide",cat:"fatloss",variants:[{strength:"15mg",price:150},{strength:"20mg",price:200},{strength:"30mg",price:300},{strength:"40mg",price:400}]},
+  {id:"tirz",name:"Tirzepatide",cat:"fatloss",variants:[{strength:"15mg",price:150},{strength:"30mg",price:250},{strength:"60mg",price:350}]},
+  {id:"glut1500",name:"Glutathione",cat:"detox",variants:[{strength:"1500mg",price:65}]},
+  {id:"slupp332",name:"SLU-PP-332",cat:"tabs",variants:[{strength:"100ct",price:200},{strength:"50ct",price:125}]},
+  {id:"teso",name:"Tesofensine",cat:"tabs",variants:[{strength:"100ct",price:250},{strength:"50ct",price:165}]},
+  {id:"aminoTab",name:"5-Amino-1MQ tab",cat:"tabs",variants:[{strength:"50ct",price:100}]},
+  {id:"hospira30",name:"Hospira",cat:"supplies",variants:[{strength:"30mL",price:20}]},
+  {id:"syringes",name:"Syringes",cat:"supplies",variants:[{strength:"each",price:0.50}]},
+  {id:"wipes",name:"Alcohol wipes",cat:"supplies",variants:[{strength:"each",price:0.25}]},
+  {id:"kitfull",name:"Water + syr + wipes + recon",cat:"kits",variants:[{strength:"kit",price:35}]},
+];
 
-        return `
-          <div data-anchor="${catKey}" style="margin-top:14px">
-            <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap">
-              <div>
-                <h3 style="margin:0; font-size:18px; font-weight:980">${esc(getCatLabel(catKey))}</h3>
-                <div style="margin-top:4px; color:var(--muted); font-weight:850; font-size:13px">${esc(CAT_DESC[catKey]||"")}</div>
-              </div>
-              <button class="btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Top</button>
-            </div>
-            <div style="display:grid; gap:12px; margin-top:12px; grid-template-columns: repeat(2, minmax(0,1fr));">
-              ${rows || `<div class="note">No matches in this section.</div>`}
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
+const state={cat:"all",q:"",sort:"featured",sectionView:false,detail:null,cart:new Map(),fulfillment:"pickup"};
 
-    function openDetail(item, variant){
-      state.detail = { item, variant };
-      document.getElementById("dTitle").textContent = item.name;
-      document.getElementById("dDesc").textContent = CAT_DESC[item.cat] || "Catalog item";
+const money=(n)=>`$${Number(n).toFixed(2)}`;
+const esc=(s)=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg){ const el=document.getElementById("toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("show"),1400); }
+function itemMinPrice(it){ return Math.min(...it.variants.map(v=>Number(v.price))); }
+function itemMaxPrice(it){ return Math.max(...it.variants.map(v=>Number(v.price))); }
+function matches(it,q){ if(!q) return true; const hay=[it.name,it.cat,...it.variants.map(v=>`${v.strength} ${v.price}`)].join(" ").toLowerCase(); return hay.includes(q.toLowerCase()); }
+function inCat(it,cat){ return cat==="all"?true:it.cat===cat; }
+function getCatLabel(key){ return (CATS.find(c=>c.key===key)||{}).label||key; }
+function sortItems(list,sort){ const a=[...list]; if(sort==="nameAsc") a.sort((x,y)=>x.name.localeCompare(y.name)); if(sort==="nameDesc") a.sort((x,y)=>y.name.localeCompare(x.name)); if(sort==="priceAsc") a.sort((x,y)=>itemMinPrice(x)-itemMinPrice(y)); if(sort==="priceDesc") a.sort((x,y)=>itemMaxPrice(y)-itemMaxPrice(x)); if(sort==="featured"){const rank={healing:1,energy:2,gh:3,cognitive:4,aesthetic:5,fatloss:6,detox:7,tabs:8,supplies:9,kits:10}; a.sort((x,y)=>(rank[x.cat]||99)-(rank[y.cat]||99));} return a; }
 
-      document.getElementById("dMeta").innerHTML = `
-        <span class="pill red">${esc(getCatLabel(item.cat))}</span>
-        <span class="pill">${esc(item.id.toUpperCase())}</span>
-        <span class="pill">${item.variants.length} option${item.variants.length>1?"s":""}</span>
-      `;
+/* ══ CART PERSISTENCE ══ */
+function cartToArray(){ return [...state.cart.entries()].map(([k,v])=>({key:k,...v})); }
+function cartFromArray(arr){ state.cart.clear(); (arr||[]).forEach(({key,...v})=>state.cart.set(key,v)); }
+function persistCart(){ const user=Auth.current(); if(user) Auth.saveCart(user.email,cartToArray()); }
 
-      
-      // More info bullets (skip Supplies)
-      const bullets = getInfoBullets(item);
-      const wrap = document.getElementById("dBulletsWrap");
-      const ul = document.getElementById("dBullets");
-      if(!bullets || !wrap || !ul){
-        if(wrap) wrap.style.display = "none";
-      } else {
-        ul.innerHTML = bullets.slice(0,3).map(t=> `<li>${esc(t)}</li>`).join("");
-        wrap.style.display = "block";
-      }
+/* ══ FULFILLMENT ══ */
+function setFulfillment(mode){
+  state.fulfillment=mode;
+  document.getElementById("pickupBtn").dataset.active=String(mode==="pickup");
+  document.getElementById("shipBtn").dataset.active=String(mode==="ship");
+  document.getElementById("shipAddressWrap").style.display=mode==="ship"?"block":"none";
+}
 
-document.getElementById("dNote").innerHTML = `
-        <b style="color:#fff">Line item:</b><br>
-        ${esc(item.name)} — ${esc(variant.strength)} — ${money(variant.price)}<br><br>
-        <span style="color:rgba(242,242,242,.78)">Add to cart to see totals.</span>
-      `;
+/* ══ AUTH UI ══ */
+function updateAuthBtn(){ const user=Auth.current(); document.getElementById("authBtn").textContent=user?`👤 ${user.name.split(" ")[0]}`:"👤 Sign In"; }
+document.getElementById("authBtn").addEventListener("click",()=>{ const user=Auth.current(); if(user){ document.getElementById("acctName").textContent=user.name; document.getElementById("acctEmail").textContent=user.email; renderHistory(); open("accountBackdrop"); } else { showLogin(); } });
+function showLogin(){ document.getElementById("loginForm").style.display="block"; document.getElementById("signupForm").style.display="none"; document.getElementById("authTitle").textContent="Welcome Back"; document.getElementById("authSub").textContent="Sign in to your SavageCell account."; document.getElementById("loginErr").textContent=""; document.getElementById("loginOverlay").classList.remove("hidden"); }
+function showSignup(){ document.getElementById("loginForm").style.display="none"; document.getElementById("signupForm").style.display="block"; document.getElementById("authTitle").textContent="Create Account"; document.getElementById("authSub").textContent="Join SavageCell Research."; document.getElementById("signupErr").textContent=""; document.getElementById("loginOverlay").classList.remove("hidden"); }
+function closeAuthOverlay(){ document.getElementById("loginOverlay").classList.add("hidden"); }
+document.getElementById("toSignup").addEventListener("click",showSignup);
+document.getElementById("toLogin").addEventListener("click",showLogin);
+document.getElementById("closeLogin").addEventListener("click",closeAuthOverlay);
+document.getElementById("closeSignup").addEventListener("click",closeAuthOverlay);
 
-      updateDetailVariant(variant);
+document.getElementById("loginBtn").addEventListener("click",()=>{
+  const email=document.getElementById("loginEmail").value.trim(), pass=document.getElementById("loginPass").value;
+  const res=Auth.login(email,pass);
+  if(!res.ok){ document.getElementById("loginErr").textContent=res.err; return; }
+  closeAuthOverlay();
+  const saved=Auth.loadCart(res.user.email);
+  if(saved.length){ cartFromArray(saved); renderCart(); }
+  updateAuthBtn();
+  document.getElementById("orderName").value=res.user.name;
+  document.getElementById("orderEmail").value=res.user.email;
+  toast(`Welcome back, ${res.user.name.split(" ")[0]}!`);
+});
 
-      const dStrengths = document.getElementById("dStrengths");
-      dStrengths.innerHTML = "";
-      item.variants.forEach((v)=>{
-        const b = document.createElement("button");
-        b.className = "strength";
-        b.textContent = v.strength;
-        b.dataset.active = String(v.strength === variant.strength);
-        b.onclick = ()=>{
-          dStrengths.querySelectorAll(".strength").forEach(x=> x.dataset.active = "false");
-          b.dataset.active = "true";
-          updateDetailVariant(v);
-        };
-        dStrengths.appendChild(b);
-      });
+document.getElementById("signupBtn").addEventListener("click",()=>{
+  const name=document.getElementById("signupName").value.trim(), email=document.getElementById("signupEmail").value.trim(), pass=document.getElementById("signupPass").value;
+  const res=Auth.signup(name,email,pass);
+  if(!res.ok){ document.getElementById("signupErr").textContent=res.err; return; }
+  closeAuthOverlay(); updateAuthBtn();
+  document.getElementById("orderName").value=res.user.name;
+  document.getElementById("orderEmail").value=res.user.email;
+  toast(`Account created! Welcome, ${res.user.name.split(" ")[0]}!`);
+});
 
-      open("detailBackdrop");
-    }
+document.getElementById("logoutBtn").addEventListener("click",()=>{ Auth.logout(); updateAuthBtn(); close("accountBackdrop"); toast("Signed out."); });
 
-    function updateDetailVariant(variant){
-      state.detail.variant = variant;
-      document.getElementById("dPrice").textContent = money(variant.price);
-      document.getElementById("dStrength").textContent = `Selected: ${variant.strength}`;
-    }
+/* ══ ORDER HISTORY ══ */
+function renderHistory(){
+  const user=Auth.current(), list=document.getElementById("historyList");
+  if(!user){ list.innerHTML=`<div class="note">Sign in to see order history.</div>`; return; }
+  const orders=Auth.getOrders(user.email);
+  if(!orders.length){ list.innerHTML=`<div class="note">No orders yet. Add items to your cart and submit!</div>`; return; }
+  list.innerHTML=orders.map(o=>`<div class="history-item"><div class="h-head"><span class="h-date">${o.date}</span><span class="h-total">${money(o.total)}</span></div><div class="h-lines">${esc(o.lines)}</div><span class="h-method">${o.method==="pickup"?"📦 Local Pickup":"🚚 Shipped"}</span></div>`).join("");
+}
 
-    document.getElementById("addToCart").onclick = ()=>{
-      if(!state.detail) return;
-      addToCart(state.detail.item, state.detail.variant);
-      toast("Added to cart");
-      renderCart();
-    };
+/* ══ EMAILJS ORDER SUBMIT ══ */
+document.getElementById("submitOrder").addEventListener("click",async ()=>{
+  const name=document.getElementById("orderName").value.trim();
+  const email=document.getElementById("orderEmail").value.trim();
+  const notes=document.getElementById("orderNotes").value.trim();
+  const addr=document.getElementById("shipAddress").value.trim();
+  const statusEl=document.getElementById("orderStatus");
 
-    document.getElementById("copyLine").onclick = async ()=>{
-      if(!state.detail) return;
-      const line = `${state.detail.item.name} — ${state.detail.variant.strength} — ${money(state.detail.variant.price)}`;
-      try{ await navigator.clipboard.writeText(line); toast("Copied"); }
-      catch(e){ toast("Copy failed"); }
-    };
+  if(!name||!email){ statusEl.className="order-status error"; statusEl.textContent="Please enter your name and email."; return; }
+  if(state.cart.size===0){ statusEl.className="order-status error"; statusEl.textContent="Your cart is empty."; return; }
+  if(state.fulfillment==="ship"&&!addr){ statusEl.className="order-status error"; statusEl.textContent="Please enter a shipping address."; return; }
 
-    function cartKey(item, variant){ return `${item.id}::${variant.strength}`; }
-    function addToCart(item, variant){
-      const key = cartKey(item, variant);
-      const cur = state.cart.get(key);
-      if(cur){ cur.qty += 1; }
-      else{ state.cart.set(key, { itemId:item.id, name:item.name, cat:item.cat, strength:variant.strength, unitPrice:Number(variant.price), qty:1 }); }
-      renderCart();
-    }
-    function decCart(key){
-      const cur = state.cart.get(key);
-      if(!cur) return;
-      cur.qty -= 1;
-      if(cur.qty <= 0) state.cart.delete(key);
-      renderCart();
-    }
-    function incCart(key){
-      const cur = state.cart.get(key);
-      if(!cur) return;
-      cur.qty += 1;
-      renderCart();
-    }
-    function clearCart(){ state.cart.clear(); renderCart(); }
+  const t=computeTotals();
+  const cartLines=[...state.cart.values()].map(it=>`${it.name} (${it.strength}) x${it.qty} = ${money(it.unitPrice*it.qty)}`).join("\n");
+  const method=state.fulfillment==="pickup"?"Local Pickup":`Ship to: ${addr}`;
 
-    function computeTotals(){
-      const items = [...state.cart.values()];
-      const count = items.reduce((a,x)=> a + x.qty, 0);
-      const subtotal = items.reduce((a,x)=> a + x.unitPrice * x.qty, 0);
-      return { subtotal, total: subtotal, count, lines: items.length };
-    }
+  const btn=document.getElementById("submitOrder");
+  btn.disabled=true; btn.textContent="Sending…";
+  statusEl.className="order-status"; statusEl.textContent="";
 
-    function renderCart(){
-      const list = document.getElementById("cartList");
-      list.innerHTML = "";
-
-      const entries = [...state.cart.entries()];
-      if(!entries.length){
-        list.innerHTML = `<div class="note">Cart is empty.</div>`;
-      } else {
-        entries.forEach(([key, it])=>{
-          const row = document.createElement("div");
-          row.className = "cart-item";
-          row.innerHTML = `
-            <div class="l">
-              <b>${esc(it.name)}</b>
-              <span>${esc(getCatLabel(it.cat))} • ${esc(it.strength)} • ${money(it.unitPrice)} each</span>
-            </div>
-            <div class="r">
-              <span class="qty">x ${it.qty}</span>
-              <button class="iconbtn" aria-label="Decrease">−</button>
-              <button class="iconbtn" aria-label="Increase">+</button>
-            </div>
-          `;
-          const [dec, inc] = row.querySelectorAll(".iconbtn");
-          dec.onclick = ()=> decCart(key);
-          inc.onclick = ()=> incCart(key);
-          list.appendChild(row);
-        });
-      }
-
-      const t = computeTotals();
-      document.getElementById("cartMeta").innerHTML = `
-        <span class="pill red">${t.lines} line${t.lines===1?"":"s"}</span>
-        <span class="pill">${t.count} item${t.count===1?"":"s"}</span>
-      `;
-      document.getElementById("subTotal").textContent = money(t.subtotal);
-      document.getElementById("grandTotal").textContent = money(t.total);
-      document.getElementById("subMeta").textContent = `${t.count} item${t.count===1?"":"s"}`;
-    }
-
-    function open(id){ document.getElementById(id).classList.add("open"); document.body.style.overflow = "hidden"; }
-    function close(id){
-      document.getElementById(id).classList.remove("open");
-      if(!document.querySelector(".backdrop.open")) document.body.style.overflow = "";
-    }
-
-    document.querySelectorAll("[data-close]").forEach(btn=> btn.onclick = ()=> close(btn.dataset.close));
-    document.querySelectorAll(".backdrop").forEach(b=>{
-      b.addEventListener("click", (e)=>{ if(e.target === b) close(b.id); });
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{
+      customer_name:name, customer_email:email, fulfillment:method,
+      cart_lines:cartLines, cart_total:money(t.total), item_count:`${t.count} item(s)`,
+      notes:notes||"None", order_date:new Date().toLocaleString(),
+      to_email:"orders@savagecellresearch.com"
     });
+    const user=Auth.current();
+    if(user){ Auth.addOrder(user.email,{date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment}); }
+    statusEl.className="order-status success"; statusEl.textContent="✅ Order sent! We'll be in touch soon to confirm.";
+    state.cart.clear(); persistCart(); renderCart(); toast("Order submitted!");
+  } catch(err) {
+    console.error("EmailJS error:",err);
+    statusEl.className="order-status error"; statusEl.textContent="⚠️ Couldn't send — check EmailJS setup or DM us directly.";
+  }
+  btn.disabled=false; btn.textContent="📨 Send Order to SavageCell";
+});
 
-    window.addEventListener("keydown", (e)=>{
-      if(e.key === "/"){ e.preventDefault(); document.getElementById("search").focus(); }
-      if(e.key === "Escape"){ document.querySelectorAll(".backdrop.open").forEach(x=> close(x.id)); }
-    });
+/* ══ CATALOG ══ */
+function buildChips(){ const chips=document.getElementById("chips"); chips.innerHTML=""; CATS.forEach(c=>{ const b=document.createElement("button"); b.className="chip"; b.textContent=c.label; b.dataset.key=c.key; b.dataset.active=String(state.cat===c.key); b.onclick=()=>{ state.cat=(state.cat===c.key)?"all":c.key; syncUI(); render(); }; chips.appendChild(b); }); }
+function syncUI(){ document.querySelectorAll(".chip[data-key]").forEach(el=>{ el.dataset.active=String(el.dataset.key===state.cat); }); document.getElementById("sortSel").value=state.sort; const t=document.getElementById("toggleSections"); t.setAttribute("aria-pressed",String(state.sectionView)); t.textContent=state.sectionView?"🧱 Card Grid":"🧭 Section View"; }
+function scrollToCat(catKey){ if(catKey==="all") window.scrollTo({top:0,behavior:"smooth"}); const anchor=document.querySelector(`[data-anchor="${catKey}"]`); if(anchor) anchor.scrollIntoView({behavior:"smooth",block:"start"}); }
 
-    document.getElementById("search").addEventListener("input", (e)=>{ state.q = e.target.value; render(); });
-    document.getElementById("sortSel").addEventListener("change", (e)=>{ state.sort = e.target.value; render(); });
-    document.getElementById("toggleSections").addEventListener("click", ()=>{
-      state.sectionView = !state.sectionView;
-      syncUI(); render(true);
-    });
-document.getElementById("openCart").onclick = ()=> { open("cartBackdrop"); renderCart(); };
-document.getElementById("clearCart").onclick = ()=> { clearCart(); toast("Cart cleared"); };
+function render(scrollAfter=false){
+  const grid=document.getElementById("grid"), empty=document.getElementById("empty"), sv=document.getElementById("sectionView");
+  let list=ITEMS.filter(it=>inCat(it,state.cat)&&matches(it,state.q));
+  list=sortItems(list,state.sort);
+  const cats=new Set(ITEMS.map(i=>i.cat));
+  document.getElementById("statItems").textContent=String(ITEMS.length);
+  document.getElementById("statCats").textContent=String(cats.size);
+  document.getElementById("statLow").textContent=money(Math.min(...ITEMS.map(itemMinPrice)));
+  document.getElementById("statHigh").textContent=money(Math.max(...ITEMS.map(itemMaxPrice)));
+  if(state.sectionView){ sv.style.display="block"; grid.style.display="none"; sv.innerHTML=buildSections(); empty.style.display="none"; if(scrollAfter) setTimeout(()=>scrollToCat(state.cat),40); return; }
+  sv.style.display="none"; grid.style.display="grid"; grid.innerHTML=""; empty.style.display=list.length?"none":"block";
+  list.forEach(it=>{
+    const minP=itemMinPrice(it),maxP=itemMaxPrice(it),range=(minP===maxP)?money(minP):`${money(minP)}–${money(maxP)}`;
+    const card=document.createElement("article"); card.className="card";
+    card.innerHTML=`<div class="top"><div style="min-width:0"><h3 class="name">${esc(it.name)}</h3><div class="tagrow"><span class="tag red">${esc(getCatLabel(it.cat))}</span><span class="tag mono">${esc(it.id.toUpperCase())}</span></div></div><div class="price">${range}<small>${it.variants.length>1?"range":""}</small></div></div><div class="mid"><div style="color:var(--muted);font-weight:850;font-size:12px;letter-spacing:.12em;text-transform:uppercase;">${esc(CAT_DESC[it.cat]||"Catalog item")}</div><div class="strengths">${it.variants.map((v,i)=>`<button class="strength" data-idx="${i}" title="Select ${esc(v.strength)}">${esc(v.strength)}</button>`).join("")}</div></div><div class="footer"><div class="mini">Tap <span class="kbd">View</span> for details</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" data-view="1">👁 View</button><button class="btn primary" data-add="1">🛒 Add</button></div></div>`;
+    it._active=0;
+    card.querySelectorAll(".strength").forEach(btn=>{ btn.onclick=()=>{ card.querySelectorAll(".strength").forEach(b=>b.dataset.active="false"); btn.dataset.active="true"; it._active=Number(btn.dataset.idx); const v=it.variants[it._active]; card.querySelector(".price").innerHTML=`${money(v.price)}<small>${esc(v.strength)}</small>`; }; });
+    const first=card.querySelector(".strength"); if(first) first.dataset.active="true";
+    card.querySelector("[data-view]").onclick=()=>openDetail(it,it.variants[it._active||0]);
+    card.querySelector("[data-add]").onclick=()=>{ addToCart(it,it.variants[it._active||0]); toast("Added to cart"); };
+    card.addEventListener("mousemove",(e)=>{ if(window.matchMedia("(hover:hover) and (pointer:fine)").matches){ const r=card.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-0.5,y=(e.clientY-r.top)/r.height-0.5; card.style.transform=`perspective(900px) rotateY(${x*6}deg) rotateX(${y*-6}deg)`; } });
+    card.addEventListener("mouseleave",()=>card.style.transform="translateZ(0)");
+    grid.appendChild(card);
+  });
+  if(scrollAfter) setTimeout(()=>scrollToCat(state.cat),40);
+}
 
-    function init(){ buildChips(); syncUI(); render(); renderCart(); }
-    init();
-  </script>
+function buildSections(){
+  const order=["healing","energy","gh","cognitive","aesthetic","fatloss","detox","tabs","supplies","kits"];
+  return order.map(catKey=>{
+    if(state.cat!=="all"&&state.cat!==catKey) return "";
+    const group=ITEMS.filter(it=>it.cat===catKey&&matches(it,state.q));
+    const rows=group.map(it=>{ const lines=it.variants.map(vv=>`<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div style="min-width:0"><b style="font-weight:980">${esc(it.name)}</b><span style="color:var(--muted);font-weight:850"> • ${esc(vv.strength)}</span></div><div style="font-weight:980">${money(vv.price)}</div></div>`).join(""); return `<div class="tile" style="padding:12px;border-radius:18px">${lines}</div>`; }).join("");
+    return `<div data-anchor="${catKey}" style="margin-top:14px"><div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><h3 style="margin:0;font-size:18px;font-weight:980">${esc(getCatLabel(catKey))}</h3><div style="margin-top:4px;color:var(--muted);font-weight:850;font-size:13px">${esc(CAT_DESC[catKey]||"")}</div></div><button class="btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Top</button></div><div style="display:grid;gap:12px;margin-top:12px;grid-template-columns:repeat(2,minmax(0,1fr));">${rows||`<div class="note">No matches in this section.</div>`}</div></div>`;
+  }).join("");
+}
+
+function openDetail(item,variant){
+  state.detail={item,variant};
+  document.getElementById("dTitle").textContent=item.name;
+  document.getElementById("dDesc").textContent=CAT_DESC[item.cat]||"Catalog item";
+  document.getElementById("dMeta").innerHTML=`<span class="pill red">${esc(getCatLabel(item.cat))}</span><span class="pill">${esc(item.id.toUpperCase())}</span><span class="pill">${item.variants.length} option${item.variants.length>1?"s":""}</span>`;
+  const bullets=getInfoBullets(item),wrap=document.getElementById("dBulletsWrap"),ul=document.getElementById("dBullets");
+  if(!bullets||!wrap||!ul){ if(wrap) wrap.style.display="none"; } else { ul.innerHTML=bullets.slice(0,3).map(t=>`<li>${esc(t)}</li>`).join(""); wrap.style.display="block"; }
+  document.getElementById("dNote").innerHTML=`<b style="color:#fff">Line item:</b><br>${esc(item.name)} — ${esc(variant.strength)} — ${money(variant.price)}<br><br><span style="color:rgba(242,242,242,.78)">Add to cart to see totals.</span>`;
+  updateDetailVariant(variant);
+  const dStrengths=document.getElementById("dStrengths"); dStrengths.innerHTML="";
+  item.variants.forEach(v=>{ const b=document.createElement("button"); b.className="strength"; b.textContent=v.strength; b.dataset.active=String(v.strength===variant.strength); b.onclick=()=>{ dStrengths.querySelectorAll(".strength").forEach(x=>x.dataset.active="false"); b.dataset.active="true"; updateDetailVariant(v); }; dStrengths.appendChild(b); });
+  open("detailBackdrop");
+}
+function updateDetailVariant(variant){ state.detail.variant=variant; document.getElementById("dPrice").textContent=money(variant.price); document.getElementById("dStrength").textContent=`Selected: ${variant.strength}`; }
+
+document.getElementById("addToCart").onclick=()=>{ if(!state.detail) return; addToCart(state.detail.item,state.detail.variant); toast("Added to cart"); };
+document.getElementById("copyLine").onclick=async ()=>{ if(!state.detail) return; const line=`${state.detail.item.name} — ${state.detail.variant.strength} — ${money(state.detail.variant.price)}`; try{ await navigator.clipboard.writeText(line); toast("Copied"); }catch(e){ toast("Copy failed"); } };
+
+/* ══ CART ══ */
+function cartKey(item,variant){ return `${item.id}::${variant.strength}`; }
+function addToCart(item,variant){ const key=cartKey(item,variant),cur=state.cart.get(key); if(cur){ cur.qty+=1; } else { state.cart.set(key,{itemId:item.id,name:item.name,cat:item.cat,strength:variant.strength,unitPrice:Number(variant.price),qty:1}); } persistCart(); renderCart(); }
+function decCart(key){ const cur=state.cart.get(key); if(!cur) return; cur.qty-=1; if(cur.qty<=0) state.cart.delete(key); persistCart(); renderCart(); }
+function incCart(key){ const cur=state.cart.get(key); if(!cur) return; cur.qty+=1; persistCart(); renderCart(); }
+function clearCart(){ state.cart.clear(); persistCart(); renderCart(); }
+function computeTotals(){ const items=[...state.cart.values()]; return{subtotal:items.reduce((a,x)=>a+x.unitPrice*x.qty,0),total:items.reduce((a,x)=>a+x.unitPrice*x.qty,0),count:items.reduce((a,x)=>a+x.qty,0),lines:items.length}; }
+
+function renderCart(){
+  const list=document.getElementById("cartList"); list.innerHTML="";
+  const entries=[...state.cart.entries()];
+  if(!entries.length){ list.innerHTML=`<div class="note">Cart is empty.</div>`; }
+  else { entries.forEach(([key,it])=>{ const row=document.createElement("div"); row.className="cart-item"; row.innerHTML=`<div class="l"><b>${esc(it.name)}</b><span>${esc(getCatLabel(it.cat))} • ${esc(it.strength)} • ${money(it.unitPrice)} each</span></div><div class="r"><span class="qty">x ${it.qty}</span><button class="iconbtn" aria-label="Decrease">−</button><button class="iconbtn" aria-label="Increase">+</button></div>`; const [dec,inc]=row.querySelectorAll(".iconbtn"); dec.onclick=()=>decCart(key); inc.onclick=()=>incCart(key); list.appendChild(row); }); }
+  const t=computeTotals();
+  document.getElementById("cartMeta").innerHTML=`<span class="pill red">${t.lines} line${t.lines===1?"":"s"}</span><span class="pill">${t.count} item${t.count===1?"":"s"}</span>`;
+  document.getElementById("subTotal").textContent=money(t.subtotal);
+  document.getElementById("grandTotal").textContent=money(t.total);
+  document.getElementById("subMeta").textContent=`${t.count} item${t.count===1?"":"s"}`;
+}
+
+/* ══ DRAWER ══ */
+function open(id){ document.getElementById(id).classList.add("open"); document.body.style.overflow="hidden"; }
+function close(id){ document.getElementById(id).classList.remove("open"); if(!document.querySelector(".backdrop.open")) document.body.style.overflow=""; }
+document.querySelectorAll("[data-close]").forEach(btn=>btn.onclick=()=>close(btn.dataset.close));
+document.querySelectorAll(".backdrop").forEach(b=>{ b.addEventListener("click",(e)=>{ if(e.target===b) close(b.id); }); });
+window.addEventListener("keydown",(e)=>{ if(e.key==="/"){e.preventDefault();document.getElementById("search").focus();} if(e.key==="Escape") document.querySelectorAll(".backdrop.open").forEach(x=>close(x.id)); });
+
+document.getElementById("search").addEventListener("input",(e)=>{ state.q=e.target.value; render(); });
+document.getElementById("sortSel").addEventListener("change",(e)=>{ state.sort=e.target.value; render(); });
+document.getElementById("toggleSections").addEventListener("click",()=>{ state.sectionView=!state.sectionView; syncUI(); render(true); });
+document.getElementById("openCart").onclick=()=>{ open("cartBackdrop"); renderCart(); };
+document.getElementById("clearCart").onclick=()=>{ clearCart(); toast("Cart cleared"); };
+
+/* ══ INIT ══ */
+function init(){
+  buildChips(); syncUI(); render(); renderCart(); updateAuthBtn();
+  const user=Auth.current();
+  if(user){
+    const saved=Auth.loadCart(user.email);
+    if(saved.length){ cartFromArray(saved); renderCart(); }
+    document.getElementById("orderName").value=user.name;
+    document.getElementById("orderEmail").value=user.email;
+  }
+}
+init();
+</script>
 </body>
 </html>
