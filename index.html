@@ -468,9 +468,28 @@
         <div class="history-list" id="historyList"></div>
       </div>
       <div class="pane right">
-        <h3 class="d-title" style="font-size:22px">Account</h3>
+        <h3 class="d-title" style="font-size:20px">Account Settings</h3>
         <div class="divider"></div>
-        <div class="note">Your cart is automatically saved between visits when you're signed in.</div>
+
+        <!-- Saved Shipping Address -->
+        <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Saved Shipping Address</b>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+          <input class="f-input" id="acctShipAddress" placeholder="Street, City, State, ZIP" style="font-size:13px;padding:10px 14px;" />
+          <button class="btn" id="saveAddressBtn" style="width:100%;justify-content:center;">💾 Save Address</button>
+          <div style="font-size:12px;color:var(--muted);min-height:16px;" id="addressMsg"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Change Password -->
+        <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Change Password</b>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+          <input class="f-input" type="password" id="acctOldPass" placeholder="Current password" style="font-size:13px;padding:10px 14px;" />
+          <input class="f-input" type="password" id="acctNewPass" placeholder="New password (min 6 chars)" style="font-size:13px;padding:10px 14px;" />
+          <button class="btn" id="changePassBtn" style="width:100%;justify-content:center;">🔒 Update Password</button>
+          <div style="font-size:12px;min-height:16px;" id="passMsg"></div>
+        </div>
+
         <div class="divider"></div>
         <button class="btn" id="logoutBtn" style="width:100%;justify-content:center;">🚪 Sign Out</button>
       </div>
@@ -526,7 +545,16 @@ const Auth = {
   saveCart(email,arr){ const u=this._users(),k=email.toLowerCase().trim(); if(u[k]){u[k].savedCart=arr;this._save(u);} },
   loadCart(email){ const u=this._users(); return u[email.toLowerCase().trim()]?.savedCart||[]; },
   addOrder(email,order){ const u=this._users(),k=email.toLowerCase().trim(); if(u[k]){u[k].orders.unshift(order);this._save(u);} },
-  getOrders(email){ const u=this._users(); return u[email.toLowerCase().trim()]?.orders||[]; }
+  getOrders(email){ const u=this._users(); return u[email.toLowerCase().trim()]?.orders||[]; },
+  changePassword(email,oldPass,newPass){
+    const u=this._users(),k=email.toLowerCase().trim();
+    if(!u[k]) return{ok:false,err:"Account not found."};
+    if(u[k].password!==oldPass) return{ok:false,err:"Current password is incorrect."};
+    if(newPass.length<6) return{ok:false,err:"New password must be at least 6 characters."};
+    u[k].password=newPass; this._save(u); return{ok:true};
+  },
+  saveShippingAddress(email,addr){ const u=this._users(),k=email.toLowerCase().trim(); if(u[k]){u[k].shippingAddress=addr;this._save(u);} },
+  getShippingAddress(email){ const u=this._users(); return u[email.toLowerCase().trim()]?.shippingAddress||""; }
 };
 
 /* ══ AGE GATE ══ */
@@ -623,7 +651,7 @@ function setFulfillment(mode){
 
 /* ══ AUTH UI ══ */
 function updateAuthBtn(){ const user=Auth.current(); document.getElementById("authBtn").textContent=user?`👤 ${user.name.split(" ")[0]}`:"👤 Sign In"; }
-document.getElementById("authBtn").addEventListener("click",()=>{ const user=Auth.current(); if(user){ document.getElementById("acctName").textContent=user.name; document.getElementById("acctEmail").textContent=user.email; renderHistory(); open("accountBackdrop"); } else { showLogin(); } });
+document.getElementById("authBtn").addEventListener("click",()=>{ const user=Auth.current(); if(user){ document.getElementById("acctName").textContent=user.name; document.getElementById("acctEmail").textContent=user.email; renderHistory(); initAccountSettings(); open("accountBackdrop"); } else { showLogin(); } });
 function showLogin(){ document.getElementById("loginForm").style.display="block"; document.getElementById("signupForm").style.display="none"; document.getElementById("authTitle").textContent="Welcome Back"; document.getElementById("authSub").textContent="Sign in to your SavageCell account."; document.getElementById("loginErr").textContent=""; document.getElementById("loginOverlay").classList.remove("hidden"); }
 function showSignup(){ document.getElementById("loginForm").style.display="none"; document.getElementById("signupForm").style.display="block"; document.getElementById("authTitle").textContent="Create Account"; document.getElementById("authSub").textContent="Join SavageCell Research."; document.getElementById("signupErr").textContent=""; document.getElementById("loginOverlay").classList.remove("hidden"); }
 function closeAuthOverlay(){ document.getElementById("loginOverlay").classList.add("hidden"); }
@@ -642,6 +670,8 @@ document.getElementById("loginBtn").addEventListener("click",()=>{
   updateAuthBtn();
   document.getElementById("orderName").value=res.user.name;
   document.getElementById("orderEmail").value=res.user.email;
+  const savedAddr=Auth.getShippingAddress(res.user.email);
+  if(savedAddr) document.getElementById("shipAddress").value=savedAddr;
   toast(`Welcome back, ${res.user.name.split(" ")[0]}!`);
 });
 
@@ -663,10 +693,75 @@ function renderHistory(){
   if(!user){ list.innerHTML=`<div class="note">Sign in to see order history.</div>`; return; }
   const orders=Auth.getOrders(user.email);
   if(!orders.length){ list.innerHTML=`<div class="note">No orders yet. Add items to your cart and submit!</div>`; return; }
-  list.innerHTML=orders.map(o=>`<div class="history-item"><div class="h-head"><span class="h-date">${o.date}</span><span class="h-total">${money(o.total)}</span></div><div class="h-lines">${esc(o.lines)}</div><span class="h-method">${o.method==="pickup"?"📦 Local Pickup":"🚚 Shipped"}</span></div>`).join("");
+  list.innerHTML=orders.map((o,i)=>`
+    <div class="history-item">
+      <div class="h-head">
+        <span class="h-date">${o.date}</span>
+        <span class="h-total">${money(o.total)}</span>
+      </div>
+      <div class="h-lines">${esc(o.lines)}</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+        <span class="h-method">${o.method==="pickup"?"📦 Local Pickup":"🚚 Shipped"}</span>
+        ${o.cartSnapshot ? `<button class="btn" style="font-size:11px;padding:5px 10px;" onclick="reorder(${i})">🔁 Reorder</button>` : ""}
+      </div>
+    </div>
+  `).join("");
 }
 
-/* ══ EMAILJS ORDER SUBMIT ══ */
+/* ══ REORDER ══ */
+function reorder(orderIndex){
+  const user=Auth.current(); if(!user) return;
+  const orders=Auth.getOrders(user.email);
+  const order=orders[orderIndex];
+  if(!order||!order.cartSnapshot) return;
+  cartFromArray(order.cartSnapshot);
+  persistCart(); renderCart();
+  close("accountBackdrop");
+  open("cartBackdrop");
+  toast("Items added to cart!");
+}
+
+/* ══ ACCOUNT SETTINGS ══ */
+function initAccountSettings(){
+  const user=Auth.current(); if(!user) return;
+
+  // Pre-fill saved address
+  const savedAddr=Auth.getShippingAddress(user.email);
+  document.getElementById("acctShipAddress").value=savedAddr;
+  // Also pre-fill the cart shipping address if saved
+  if(savedAddr) document.getElementById("shipAddress").value=savedAddr;
+
+  // Clear messages
+  document.getElementById("addressMsg").textContent="";
+  document.getElementById("passMsg").textContent="";
+  document.getElementById("acctOldPass").value="";
+  document.getElementById("acctNewPass").value="";
+}
+
+document.getElementById("saveAddressBtn").addEventListener("click",()=>{
+  const user=Auth.current(); if(!user) return;
+  const addr=document.getElementById("acctShipAddress").value.trim();
+  Auth.saveShippingAddress(user.email, addr);
+  // Also update the cart shipping address field
+  document.getElementById("shipAddress").value=addr;
+  const msg=document.getElementById("addressMsg");
+  msg.style.color="#4ade80";
+  msg.textContent=addr ? "✅ Address saved!" : "Address cleared.";
+  setTimeout(()=>msg.textContent="",2500);
+});
+
+document.getElementById("changePassBtn").addEventListener("click",()=>{
+  const user=Auth.current(); if(!user) return;
+  const oldPass=document.getElementById("acctOldPass").value;
+  const newPass=document.getElementById("acctNewPass").value;
+  const msg=document.getElementById("passMsg");
+  const res=Auth.changePassword(user.email,oldPass,newPass);
+  if(!res.ok){ msg.style.color="#ff6b6b"; msg.textContent=res.err; return; }
+  msg.style.color="#4ade80"; msg.textContent="✅ Password updated!";
+  document.getElementById("acctOldPass").value="";
+  document.getElementById("acctNewPass").value="";
+  setTimeout(()=>msg.textContent="",2500);
+});
 document.getElementById("submitOrder").addEventListener("click",async ()=>{
   const name=document.getElementById("orderName").value.trim();
   const email=document.getElementById("orderEmail").value.trim();
@@ -695,7 +790,7 @@ document.getElementById("submitOrder").addEventListener("click",async ()=>{
       to_email:"orders@savagecellresearch.com"
     });
     const user=Auth.current();
-    if(user){ Auth.addOrder(user.email,{date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment}); }
+    if(user){ Auth.addOrder(user.email,{date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray()}); }
     statusEl.className="order-status success"; statusEl.textContent="✅ Order sent! We'll be in touch soon to confirm.";
     state.cart.clear(); persistCart(); renderCart(); toast("Order submitted!");
   } catch(err) {
