@@ -809,8 +809,10 @@ function showSignup(){ document.getElementById("loginForm").style.display="none"
 function closeAuthOverlay(){ document.getElementById("loginOverlay").classList.add("hidden"); }
 document.getElementById("toSignup").addEventListener("click",showSignup);
 document.getElementById("toLogin").addEventListener("click",showLogin);
-document.getElementById("closeLogin").addEventListener("click",closeAuthOverlay);
-document.getElementById("closeSignup").addEventListener("click",closeAuthOverlay);
+const closeLoginEl=document.getElementById("closeLogin");
+const closeSignupEl=document.getElementById("closeSignup");
+if(closeLoginEl) closeLoginEl.addEventListener("click",closeAuthOverlay);
+if(closeSignupEl) closeSignupEl.addEventListener("click",closeAuthOverlay);
 
 document.getElementById("loginBtn").addEventListener("click",()=>{
   const email=document.getElementById("loginEmail").value.trim(), pass=document.getElementById("loginPass").value;
