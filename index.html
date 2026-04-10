@@ -961,7 +961,7 @@ document.getElementById("submitOrder").addEventListener("click",async ()=>{
     });
     const user=Auth.current();
     if(user){ Auth.addOrder(user.email,{date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray()}); }
-    statusEl.className="order-status success"; statusEl.textContent="✅ Order sent! We'll be in touch soon to confirm.";
+    statusEl.className="order-status success"; statusEl.textContent="✅ Order received! You will receive a confirmation email shortly with payment instructions and pickup or delivery details.";
     state.cart.clear(); persistCart(); renderCart(); toast("Order submitted!");
   } catch(err) {
     console.error("EmailJS error:",err);
