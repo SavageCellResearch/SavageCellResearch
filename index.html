@@ -539,8 +539,6 @@
         <div class="divider"></div>
         <div class="strengths" id="dStrengths"></div>
         <div class="divider"></div>
-        <div class="note" id="dBulletsWrap" style="display:none;"><b style="color:#fff">More info</b><ul id="dBullets"></ul></div>
-        <div class="divider"></div>
         <div class="note"><b style="color:#fff">Heads up:</b> This is a catalog only. Checkout is intentionally disabled. DM to checkout.</div>
       </div>
     </div>
@@ -722,9 +720,7 @@ const CATS=[
   {key:"kits",label:"Kits"},
 ];
 const CAT_DESC={regulators:"Regulators.",detox:"Detox category.",tabs:"Tablets / capsules.",supplies:"Supplies.",kits:"Kits / bundles."};
-const INFO_BY_CAT={healing:["Often used to support recovery after training or strain.","Commonly used for tissue repair support (skin, tendons, joints).","Popular in recovery stacks for getting back to normal faster."],energy:["Often used to support energy and endurance.","Commonly used for mitochondrial / cellular energy support.","Used in performance-focused routines and recovery weeks."],gh:["Often used to support natural GH signaling.","Commonly used for recovery, sleep, and body composition support.","Used in GH-peptide style routines."],cognitive:["Often used to support focus, mood, or calm.","Commonly used for mental clarity and daily performance.","Used as-needed or in short cycles depending on the item."],aesthetic:["Often used for tanning / skin tone support.","Commonly used to support an even-looking tan.","Used with basic sun safety and hydration habits."],fatloss:["Often used to support appetite control.","Commonly used for weight-cut / recomposition support.","Used alongside nutrition and activity habits."],detox:["Often used for antioxidant support.","Commonly used to support overall recovery and wellness.","Used in wellness-focused routines."],tabs:["Oral format (tablets/capsules) for convenience.","Often used in daily routines when injection isn't needed.","Strength/count shown on the label for easy planning."],kits:["Bundle of common basics for setup.","Keeps supplies together and simple.","Good for restock or first-time setup."]};
 const INFO_BY_ID={};
-function getInfoBullets(item){ if(item.cat==="supplies") return null; return INFO_BY_ID[item.id]||INFO_BY_CAT[item.cat]||null; }
 
 const ITEMS=[
   {id:"bpc157",name:"BPC-157",cat:"all",variants:[{strength:"10mg",price:65}]},
@@ -1003,8 +999,6 @@ function openDetail(item,variant){
   document.getElementById("dTitle").textContent=item.name;
   document.getElementById("dDesc").textContent=CAT_DESC[item.cat]||"Catalog item";
   document.getElementById("dMeta").innerHTML=`<span class="pill red">${esc(getCatLabel(item.cat))}</span><span class="pill">${esc(item.id.toUpperCase())}</span><span class="pill">${item.variants.length} option${item.variants.length>1?"s":""}</span>`;
-  const bullets=getInfoBullets(item),wrap=document.getElementById("dBulletsWrap"),ul=document.getElementById("dBullets");
-  if(!bullets||!wrap||!ul){ if(wrap) wrap.style.display="none"; } else { ul.innerHTML=bullets.slice(0,3).map(t=>`<li>${esc(t)}</li>`).join(""); wrap.style.display="block"; }
   document.getElementById("dNote").innerHTML=`<b style="color:#fff">Line item:</b><br>${esc(item.name)} — ${esc(variant.strength)} — ${money(variant.price)}<br><br><span style="color:rgba(242,242,242,.78)">Add to cart to see totals.</span>`;
   updateDetailVariant(variant);
   const dStrengths=document.getElementById("dStrengths"); dStrengths.innerHTML="";
