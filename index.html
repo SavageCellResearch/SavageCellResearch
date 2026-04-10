@@ -250,6 +250,61 @@
       padding:0 5px; margin-left:2px;
     }
     .cart-badge.hidden{ display:none; }
+
+    /* ── LANDING PAGE ── */
+    .landing{
+      position:fixed; inset:0; z-index:1500;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:24px;
+      background:
+        radial-gradient(900px 700px at 85% 10%, rgba(208,21,31,.18), transparent 62%),
+        radial-gradient(1200px 900px at 50% 120%, rgba(208,21,31,.22), transparent 65%),
+        linear-gradient(180deg, #050506 0%, #07080a 45%, rgba(90,8,14,.6) 100%);
+      overflow:auto;
+    }
+    .landing.hidden{ display:none; }
+    .landing-inner{
+      width:min(460px,100%);
+      display:flex; flex-direction:column; align-items:center;
+      gap:0;
+    }
+    .landing-logo{
+      width:180px; height:180px; object-fit:contain;
+      margin-bottom:8px;
+      filter: drop-shadow(0 0 40px rgba(208,21,31,.35));
+    }
+    .landing-title{
+      margin:0 0 6px; font-size:32px; font-weight:980;
+      letter-spacing:.3px; text-align:center; color:#f2f2f2;
+    }
+    .landing-tagline{
+      margin:0 0 32px; font-size:14px; color:var(--muted);
+      letter-spacing:.15em; text-transform:uppercase; text-align:center;
+    }
+    .landing-card{
+      width:100%;
+      border:1px solid rgba(208,21,31,.45); border-radius:24px;
+      background: radial-gradient(700px 400px at 80% 10%, rgba(208,21,31,.14), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow: 0 36px 95px rgba(0,0,0,.80), 0 0 50px rgba(208,21,31,.15);
+      padding:28px 24px;
+    }
+    .landing-tabs{
+      display:flex; gap:0; margin-bottom:24px;
+      border:1px solid rgba(255,255,255,.10); border-radius:12px; overflow:hidden;
+    }
+    .landing-tab{
+      flex:1; padding:11px; border:none; cursor:pointer;
+      font-weight:900; font-size:14px; color:var(--muted);
+      background:transparent; transition: background .15s, color .15s;
+    }
+    .landing-tab.active{
+      background: rgba(208,21,31,.18); color:#f2f2f2;
+      box-shadow: inset 0 0 0 1px rgba(208,21,31,.5);
+    }
+    .landing-disclaimer{
+      margin-top:16px; font-size:11px; color:var(--muted2);
+      text-align:center; line-height:1.5;
+    }
   </style>
 </head>
 <body>
@@ -268,7 +323,56 @@
   </div>
 </div>
 
-<!-- ══ AUTH OVERLAY ══ -->
+<!-- ══ AGE GATE ══ -->
+<div class="overlay" id="ageGate">
+  <div class="overlay-box">
+    <img src="header.jpg" alt="SavageCell Research" class="overlay-logo" />
+    <h2 class="overlay-title">Age Verification Required</h2>
+    <p class="overlay-sub">This website contains products intended for research use by adults only.<br>You must be <strong>21 years of age or older</strong> to enter.</p>
+    <div class="age-btns">
+      <button class="age-btn" id="ageDeny">I am under 21</button>
+      <button class="age-btn yes" id="ageConfirm">I am 21 or older</button>
+    </div>
+    <div class="overlay-err" id="ageErr"></div>
+  </div>
+</div>
+
+<!-- ══ LANDING PAGE ══ -->
+<div class="landing" id="landingPage">
+  <div class="landing-inner">
+    <img src="header.jpg" alt="SavageCell Research" class="landing-logo" />
+    <h1 class="landing-title">SavageCell Research</h1>
+    <p class="landing-tagline">Members Only Catalog</p>
+
+    <div class="landing-card">
+      <div class="landing-tabs">
+        <button class="landing-tab active" id="tabSignIn" onclick="switchLandingTab('signin')">Sign In</button>
+        <button class="landing-tab" id="tabSignUp" onclick="switchLandingTab('signup')">Create Account</button>
+      </div>
+
+      <!-- SIGN IN -->
+      <div id="landingSignIn">
+        <div class="f-group"><label>Email</label><input class="f-input" type="email" id="landingEmail" placeholder="you@example.com" /></div>
+        <div class="f-group"><label>Password</label><input class="f-input" type="password" id="landingPass" placeholder="••••••••" /></div>
+        <button class="btn-full" id="landingSignInBtn">Sign In →</button>
+        <div class="overlay-err" id="landingSignInErr"></div>
+      </div>
+
+      <!-- SIGN UP -->
+      <div id="landingSignUp" style="display:none">
+        <div class="f-group"><label>Full Name</label><input class="f-input" type="text" id="landingName" placeholder="Your name" /></div>
+        <div class="f-group"><label>Email</label><input class="f-input" type="email" id="landingSignUpEmail" placeholder="you@example.com" /></div>
+        <div class="f-group"><label>Password (min 6 chars)</label><input class="f-input" type="password" id="landingSignUpPass" placeholder="••••••••" /></div>
+        <button class="btn-full" id="landingSignUpBtn">Create Account →</button>
+        <div class="overlay-err" id="landingSignUpErr"></div>
+      </div>
+
+      <p class="landing-disclaimer">Must be 21+ to access. Research use only. Not medical advice.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH OVERLAY (for account button when already logged in) ══ -->
 <div class="overlay hidden" id="loginOverlay">
   <div class="overlay-box">
     <img src="header.jpg" alt="SavageCell Research" class="overlay-logo" />
@@ -280,7 +384,7 @@
       <div class="f-group"><label>Password</label><input class="f-input" type="password" id="loginPass" placeholder="••••••••" /></div>
       <button class="btn-full" id="loginBtn">Sign In</button>
       <div class="overlay-err" id="loginErr"></div>
-      <div class="overlay-link">No account? <a id="toSignup">Create one</a> &nbsp;|&nbsp; <a id="closeLogin">Continue as guest</a></div>
+      <div class="overlay-link">No account? <a id="toSignup">Create one</a></div>
     </div>
 
     <div id="signupForm" style="display:none">
@@ -289,7 +393,7 @@
       <div class="f-group"><label>Password (min 6 chars)</label><input class="f-input" type="password" id="signupPass" placeholder="••••••••" /></div>
       <button class="btn-full" id="signupBtn">Create Account</button>
       <div class="overlay-err" id="signupErr"></div>
-      <div class="overlay-link">Already have one? <a id="toLogin">Sign in</a> &nbsp;|&nbsp; <a id="closeSignup">Continue as guest</a></div>
+      <div class="overlay-link">Already have one? <a id="toLogin">Sign in</a></div>
     </div>
   </div>
 </div>
@@ -557,7 +661,61 @@ const Auth = {
   getShippingAddress(email){ const u=this._users(); return u[email.toLowerCase().trim()]?.shippingAddress||""; }
 };
 
+/* ══ LANDING PAGE ══ */
+function switchLandingTab(tab){
+  document.getElementById("tabSignIn").classList.toggle("active", tab==="signin");
+  document.getElementById("tabSignUp").classList.toggle("active", tab==="signup");
+  document.getElementById("landingSignIn").style.display = tab==="signin" ? "block" : "none";
+  document.getElementById("landingSignUp").style.display = tab==="signup" ? "block" : "none";
+  document.getElementById("landingSignInErr").textContent="";
+  document.getElementById("landingSignUpErr").textContent="";
+}
+
+function enterCatalog(){
+  document.getElementById("landingPage").classList.add("hidden");
+  document.body.style.overflow="";
+}
+
+document.getElementById("landingSignInBtn").addEventListener("click",()=>{
+  const email=document.getElementById("landingEmail").value.trim();
+  const pass=document.getElementById("landingPass").value;
+  const res=Auth.login(email,pass);
+  if(!res.ok){ document.getElementById("landingSignInErr").textContent=res.err; return; }
+  const saved=Auth.loadCart(res.user.email);
+  if(saved.length){ cartFromArray(saved); renderCart(); }
+  updateAuthBtn();
+  document.getElementById("orderName").value=res.user.name;
+  document.getElementById("orderEmail").value=res.user.email;
+  const savedAddr=Auth.getShippingAddress(res.user.email);
+  if(savedAddr) document.getElementById("shipAddress").value=savedAddr;
+  enterCatalog();
+});
+
+document.getElementById("landingSignUpBtn").addEventListener("click",()=>{
+  const name=document.getElementById("landingName").value.trim();
+  const email=document.getElementById("landingSignUpEmail").value.trim();
+  const pass=document.getElementById("landingSignUpPass").value;
+  const res=Auth.signup(name,email,pass);
+  if(!res.ok){ document.getElementById("landingSignUpErr").textContent=res.err; return; }
+  updateAuthBtn();
+  document.getElementById("orderName").value=res.user.name;
+  document.getElementById("orderEmail").value=res.user.email;
+  enterCatalog();
+});
+
+// Enter on keypress
+["landingEmail","landingPass"].forEach(id=>{
+  document.getElementById(id).addEventListener("keydown",(e)=>{ if(e.key==="Enter") document.getElementById("landingSignInBtn").click(); });
+});
+["landingName","landingSignUpEmail","landingSignUpPass"].forEach(id=>{
+  document.getElementById(id).addEventListener("keydown",(e)=>{ if(e.key==="Enter") document.getElementById("landingSignUpBtn").click(); });
+});
+
 /* ══ AGE GATE ══ */
+const ageGate=document.getElementById("ageGate");
+if(localStorage.getItem("sc_age_verified")==="1") ageGate.classList.add("hidden");
+document.getElementById("ageConfirm").addEventListener("click",()=>{ localStorage.setItem("sc_age_verified","1"); ageGate.classList.add("hidden"); });
+document.getElementById("ageDeny").addEventListener("click",()=>{ document.getElementById("ageErr").textContent="You must be 21+ to access this site."; setTimeout(()=>{ window.location.href="https://www.google.com"; },1200); });
 const ageGate=document.getElementById("ageGate");
 if(localStorage.getItem("sc_age_verified")==="1") ageGate.classList.add("hidden");
 document.getElementById("ageConfirm").addEventListener("click",()=>{ localStorage.setItem("sc_age_verified","1"); ageGate.classList.add("hidden"); });
@@ -690,7 +848,7 @@ document.getElementById("signupBtn").addEventListener("click",()=>{
   toast(`Account created! Welcome, ${res.user.name.split(" ")[0]}!`);
 });
 
-document.getElementById("logoutBtn").addEventListener("click",()=>{ Auth.logout(); updateAuthBtn(); close("accountBackdrop"); toast("Signed out."); });
+document.getElementById("logoutBtn").addEventListener("click",()=>{ Auth.logout(); updateAuthBtn(); close("accountBackdrop"); document.getElementById("landingPage").classList.remove("hidden"); document.body.style.overflow="hidden"; toast("Signed out."); });
 
 /* ══ ORDER HISTORY ══ */
 function renderHistory(){
@@ -905,11 +1063,24 @@ document.getElementById("clearCart").onclick=()=>{ clearCart(); toast("Cart clea
 function init(){
   buildChips(); syncUI(); render(); renderCart(); updateAuthBtn();
   const user=Auth.current();
-  if(user){
+  const ageVerified=localStorage.getItem("sc_age_verified")==="1";
+
+  if(!ageVerified){
+    // Show age gate first, landing page hidden underneath
+    document.getElementById("landingPage").classList.add("hidden");
+    document.body.style.overflow="hidden";
+  } else if(user){
+    // Age verified + logged in — go straight to catalog
+    document.getElementById("landingPage").classList.add("hidden");
     const saved=Auth.loadCart(user.email);
     if(saved.length){ cartFromArray(saved); renderCart(); }
     document.getElementById("orderName").value=user.name;
     document.getElementById("orderEmail").value=user.email;
+    const savedAddr=Auth.getShippingAddress(user.email);
+    if(savedAddr) document.getElementById("shipAddress").value=savedAddr;
+  } else {
+    // Age verified but not logged in — show landing page
+    document.body.style.overflow="hidden";
   }
 }
 init();
