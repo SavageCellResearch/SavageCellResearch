@@ -486,6 +486,10 @@
             <input class="f-input" id="orderEmail" type="email" placeholder="you@example.com" style="font-size:13px;padding:10px 14px;" />
           </div>
           <div class="f-group" style="margin-bottom:0;">
+            <label style="font-size:12px;color:var(--muted);font-weight:850;">Phone Number</label>
+            <input class="f-input" id="orderPhone" type="tel" placeholder="(555) 555-5555" style="font-size:13px;padding:10px 14px;" />
+          </div>
+          <div class="f-group" style="margin-bottom:0;">
             <label style="font-size:12px;color:var(--muted);font-weight:850;">Notes (optional)</label>
             <input class="f-input" id="orderNotes" placeholder="Any special instructions…" style="font-size:13px;padding:10px 14px;" />
           </div>
@@ -917,11 +921,13 @@ document.getElementById("changePassBtn").addEventListener("click",()=>{
 document.getElementById("submitOrder").addEventListener("click",async ()=>{
   const name=document.getElementById("orderName").value.trim();
   const email=document.getElementById("orderEmail").value.trim();
+  const phone=document.getElementById("orderPhone").value.trim();
   const notes=document.getElementById("orderNotes").value.trim();
   const addr=document.getElementById("shipAddress").value.trim();
   const statusEl=document.getElementById("orderStatus");
 
   if(!name||!email){ statusEl.className="order-status error"; statusEl.textContent="Please enter your name and email."; return; }
+  if(!phone){ statusEl.className="order-status error"; statusEl.textContent="Please enter your phone number."; return; }
   if(state.cart.size===0){ statusEl.className="order-status error"; statusEl.textContent="Your cart is empty."; return; }
   if(state.fulfillment==="ship"&&!addr){ statusEl.className="order-status error"; statusEl.textContent="Please enter a shipping address."; return; }
 
@@ -936,7 +942,7 @@ document.getElementById("submitOrder").addEventListener("click",async ()=>{
   emailjs.init(EMAILJS_PUBLIC_KEY);
   try {
     await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{
-      customer_name:name, customer_email:email, fulfillment:method,
+      customer_name:name, customer_email:email, customer_phone:phone, fulfillment:method,
       cart_lines:cartLines, cart_total:money(t.total), item_count:`${t.count} item(s)`,
       notes:notes||"None", order_date:new Date().toLocaleString(),
       to_email:"orders@savagecellresearch.com"
