@@ -565,55 +565,57 @@ document.getElementById("ageDeny").addEventListener("click",()=>{ document.getEl
 
 /* ══ CATALOG DATA ══ */
 const CATS=[
-  {key:"all",label:"All"},{key:"healing",label:"Healing / Recovery"},{key:"energy",label:"Energy / Mito"},
-  {key:"gh",label:"Growth Hormone"},{key:"cognitive",label:"Cognitive / Neuro"},{key:"aesthetic",label:"Aesthetic / Tanning"},
-  {key:"fatloss",label:"Fat Loss"},{key:"detox",label:"Detox"},{key:"tabs",label:"Tablets / Capsules"},
-  {key:"supplies",label:"Supplies"},{key:"kits",label:"Kits"},
+  {key:"all",label:"All"},
+  {key:"regulators",label:"Regulators"},
+  {key:"detox",label:"Detox"},
+  {key:"tabs",label:"Tablets / Capsules"},
+  {key:"supplies",label:"Supplies"},
+  {key:"kits",label:"Kits"},
 ];
-const CAT_DESC={healing:"Healing & recovery items.",energy:"Energy / mitochondrial support.",gh:"Growth hormone category.",cognitive:"Cognitive / neuro category.",aesthetic:"Aesthetic / tanning items.",fatloss:"Fat loss / GLP category.",detox:"Detox category.",tabs:"Tablets / capsules.",supplies:"Supplies.",kits:"Kits / bundles."};
+const CAT_DESC={regulators:"Regulator peptides.",detox:"Detox category.",tabs:"Tablets / capsules.",supplies:"Supplies.",kits:"Kits / bundles."};
 const INFO_BY_CAT={healing:["Often used to support recovery after training or strain.","Commonly used for tissue repair support (skin, tendons, joints).","Popular in recovery stacks for getting back to normal faster."],energy:["Often used to support energy and endurance.","Commonly used for mitochondrial / cellular energy support.","Used in performance-focused routines and recovery weeks."],gh:["Often used to support natural GH signaling.","Commonly used for recovery, sleep, and body composition support.","Used in GH-peptide style routines."],cognitive:["Often used to support focus, mood, or calm.","Commonly used for mental clarity and daily performance.","Used as-needed or in short cycles depending on the item."],aesthetic:["Often used for tanning / skin tone support.","Commonly used to support an even-looking tan.","Used with basic sun safety and hydration habits."],fatloss:["Often used to support appetite control.","Commonly used for weight-cut / recomposition support.","Used alongside nutrition and activity habits."],detox:["Often used for antioxidant support.","Commonly used to support overall recovery and wellness.","Used in wellness-focused routines."],tabs:["Oral format (tablets/capsules) for convenience.","Often used in daily routines when injection isn't needed.","Strength/count shown on the label for easy planning."],kits:["Bundle of common basics for setup.","Keeps supplies together and simple.","Good for restock or first-time setup."]};
 const INFO_BY_ID={};
 function getInfoBullets(item){ if(item.cat==="supplies") return null; return INFO_BY_ID[item.id]||INFO_BY_CAT[item.cat]||null; }
 
 const ITEMS=[
-  {id:"bpc157",name:"BPC-157",cat:"healing",variants:[{strength:"10mg",price:65}]},
-  {id:"tb500",name:"TB-500",cat:"healing",variants:[{strength:"10mg",price:65}]},
-  {id:"bpctb55",name:"BPC/TB",cat:"healing",variants:[{strength:"5mg/5mg",price:65}]},
-  {id:"bpctb1010",name:"BPC/TB",cat:"healing",variants:[{strength:"10/10",price:120}]},
-  {id:"klow50101010",name:"KLOW",cat:"healing",variants:[{strength:"50/10/10/10",price:150}]},
-  {id:"ghkcu100",name:"GHK-Cu",cat:"healing",variants:[{strength:"100mg",price:60}]},
-  {id:"ara290",name:"ARA-290",cat:"healing",variants:[{strength:"10mg",price:50}]},
-  {id:"kpv10",name:"KPV",cat:"healing",variants:[{strength:"10mg",price:60}]},
-  {id:"ll37",name:"LL-37",cat:"healing",variants:[{strength:"5mg",price:35}]},
-  {id:"thymalin",name:"Thymalin",cat:"healing",variants:[{strength:"10mg",price:40}]},
-  {id:"ta1",name:"TA1",cat:"healing",variants:[{strength:"10mg",price:65}]},
-  {id:"cartalax20",name:"Cartalax",cat:"healing",variants:[{strength:"20mg",price:50}]},
-  {id:"motsc10",name:"MOTS-C",cat:"energy",variants:[{strength:"10mg",price:40},{strength:"40mg",price:110}]},
-  {id:"nad500",name:"NAD+",cat:"energy",variants:[{strength:"500mg",price:55},{strength:"1000mg",price:90}]},
-  {id:"ss3110",name:"SS-31",cat:"energy",variants:[{strength:"10mg",price:40},{strength:"50mg",price:125}]},
-  {id:"amino1mq50",name:"5-Amino-1MQ",cat:"energy",variants:[{strength:"50mg",price:125}]},
-  {id:"lcarn500",name:"L-Carnitine",cat:"energy",variants:[{strength:"500mg",price:80}]},
-  {id:"cjcdac5",name:"CJC-DAC",cat:"gh",variants:[{strength:"5mg",price:65}]},
-  {id:"cjcnodac5",name:"CJC no DAC",cat:"gh",variants:[{strength:"5mg",price:40},{strength:"10mg",price:70}]},
-  {id:"ipam10",name:"Ipamorelin",cat:"gh",variants:[{strength:"10mg",price:70}]},
-  {id:"cjcip55",name:"CJC/IPA",cat:"gh",variants:[{strength:"5/5",price:65}]},
-  {id:"tesa10",name:"Tesamorelin",cat:"gh",variants:[{strength:"10mg",price:70}]},
-  {id:"aod5",name:"AOD-9604",cat:"gh",variants:[{strength:"5mg",price:40}]},
-  {id:"mk677",name:"MK-677",cat:"gh",variants:[{strength:"100ct",price:150},{strength:"50ct",price:85}]},
-  {id:"igflr3",name:"IGF-LR3",cat:"gh",variants:[{strength:"1mg",price:60}]},
-  {id:"oxy2",name:"Oxytocin Ace",cat:"cognitive",variants:[{strength:"2mg",price:35}]},
-  {id:"semax",name:"Semax kit",cat:"cognitive",variants:[{strength:"kit",price:55}]},
-  {id:"selank",name:"Selank kit",cat:"cognitive",variants:[{strength:"kit",price:55}]},
-  {id:"pt14110",name:"PT-141",cat:"cognitive",variants:[{strength:"10mg",price:40}]},
-  {id:"pinealon10",name:"Pinealon",cat:"cognitive",variants:[{strength:"10mg",price:40}]},
-  {id:"epith50",name:"Epithalon",cat:"cognitive",variants:[{strength:"50mg",price:100}]},
-  {id:"dsip",name:"DSIP",cat:"cognitive",variants:[{strength:"5mg",price:35},{strength:"15mg",price:90}]},
-  {id:"kiss10",name:"Kisspeptin",cat:"cognitive",variants:[{strength:"10mg",price:50}]},
-  {id:"mt1",name:"Melanotan 1 (MT-1)",cat:"aesthetic",variants:[{strength:"—",price:40}]},
-  {id:"mt2",name:"Melanotan 2 (MT-2)",cat:"aesthetic",variants:[{strength:"—",price:40}]},
-  {id:"s",name:"Regulator 1",cat:"fatloss",variants:[{strength:"10mg",price:100},{strength:"15mg",price:150}]},
-  {id:"r",name:"Regulator 3",cat:"fatloss",variants:[{strength:"15mg",price:150},{strength:"20mg",price:200},{strength:"30mg",price:300},{strength:"40mg",price:400}]},
-  {id:"t",name:"Regulator 2",cat:"fatloss",variants:[{strength:"15mg",price:150},{strength:"30mg",price:250},{strength:"60mg",price:350}]},
+  {id:"bpc157",name:"BPC-157",cat:"all",variants:[{strength:"10mg",price:65}]},
+  {id:"tb500",name:"TB-500",cat:"all",variants:[{strength:"10mg",price:65}]},
+  {id:"bpctb55",name:"BPC/TB",cat:"all",variants:[{strength:"5mg/5mg",price:65}]},
+  {id:"bpctb1010",name:"BPC/TB",cat:"all",variants:[{strength:"10/10",price:120}]},
+  {id:"klow50101010",name:"KLOW",cat:"all",variants:[{strength:"50/10/10/10",price:150}]},
+  {id:"ghkcu100",name:"GHK-Cu",cat:"all",variants:[{strength:"100mg",price:60}]},
+  {id:"ara290",name:"ARA-290",cat:"all",variants:[{strength:"10mg",price:50}]},
+  {id:"kpv10",name:"KPV",cat:"all",variants:[{strength:"10mg",price:60}]},
+  {id:"ll37",name:"LL-37",cat:"all",variants:[{strength:"5mg",price:35}]},
+  {id:"thymalin",name:"Thymalin",cat:"all",variants:[{strength:"10mg",price:40}]},
+  {id:"ta1",name:"TA1",cat:"all",variants:[{strength:"10mg",price:65}]},
+  {id:"cartalax20",name:"Cartalax",cat:"all",variants:[{strength:"20mg",price:50}]},
+  {id:"motsc10",name:"MOTS-C",cat:"all",variants:[{strength:"10mg",price:40},{strength:"40mg",price:110}]},
+  {id:"nad500",name:"NAD+",cat:"all",variants:[{strength:"500mg",price:55},{strength:"1000mg",price:90}]},
+  {id:"ss3110",name:"SS-31",cat:"all",variants:[{strength:"10mg",price:40},{strength:"50mg",price:125}]},
+  {id:"amino1mq50",name:"5-Amino-1MQ",cat:"all",variants:[{strength:"50mg",price:125}]},
+  {id:"lcarn500",name:"L-Carnitine",cat:"all",variants:[{strength:"500mg",price:80}]},
+  {id:"cjcdac5",name:"CJC-DAC",cat:"all",variants:[{strength:"5mg",price:65}]},
+  {id:"cjcnodac5",name:"CJC no DAC",cat:"all",variants:[{strength:"5mg",price:40},{strength:"10mg",price:70}]},
+  {id:"ipam10",name:"Ipamorelin",cat:"all",variants:[{strength:"10mg",price:70}]},
+  {id:"cjcip55",name:"CJC/IPA",cat:"all",variants:[{strength:"5/5",price:65}]},
+  {id:"tesa10",name:"Tesamorelin",cat:"all",variants:[{strength:"10mg",price:70}]},
+  {id:"aod5",name:"AOD-9604",cat:"all",variants:[{strength:"5mg",price:40}]},
+  {id:"mk677",name:"MK-677",cat:"all",variants:[{strength:"100ct",price:150},{strength:"50ct",price:85}]},
+  {id:"igflr3",name:"IGF-LR3",cat:"all",variants:[{strength:"1mg",price:60}]},
+  {id:"oxy2",name:"Oxytocin Ace",cat:"all",variants:[{strength:"2mg",price:35}]},
+  {id:"semax",name:"Semax kit",cat:"all",variants:[{strength:"kit",price:55}]},
+  {id:"selank",name:"Selank kit",cat:"all",variants:[{strength:"kit",price:55}]},
+  {id:"pt14110",name:"PT-141",cat:"all",variants:[{strength:"10mg",price:40}]},
+  {id:"pinealon10",name:"Pinealon",cat:"all",variants:[{strength:"10mg",price:40}]},
+  {id:"epith50",name:"Epithalon",cat:"all",variants:[{strength:"50mg",price:100}]},
+  {id:"dsip",name:"DSIP",cat:"all",variants:[{strength:"5mg",price:35},{strength:"15mg",price:90}]},
+  {id:"kiss10",name:"Kisspeptin",cat:"all",variants:[{strength:"10mg",price:50}]},
+  {id:"mt1",name:"Melanotan 1 (MT-1)",cat:"all",variants:[{strength:"—",price:40}]},
+  {id:"mt2",name:"Melanotan 2 (MT-2)",cat:"all",variants:[{strength:"—",price:40}]},
+  {id:"s",name:"Regulator 1",cat:"regulators",variants:[{strength:"10mg",price:100},{strength:"15mg",price:150}]},
+  {id:"r",name:"Regulator 3",cat:"regulators",variants:[{strength:"15mg",price:150},{strength:"20mg",price:200},{strength:"30mg",price:300},{strength:"40mg",price:400}]},
+  {id:"t",name:"Regulator 2",cat:"regulators",variants:[{strength:"15mg",price:150},{strength:"30mg",price:250},{strength:"60mg",price:350}]},
   {id:"glut1500",name:"Glutathione",cat:"detox",variants:[{strength:"1500mg",price:65}]},
   {id:"slupp332",name:"SLU-PP-332",cat:"tabs",variants:[{strength:"100ct",price:200},{strength:"50ct",price:125}]},
   {id:"teso",name:"Tesofensine",cat:"tabs",variants:[{strength:"100ct",price:250},{strength:"50ct",price:165}]},
@@ -632,9 +634,12 @@ function toast(msg){ const el=document.getElementById("toast"); el.textContent=m
 function itemMinPrice(it){ return Math.min(...it.variants.map(v=>Number(v.price))); }
 function itemMaxPrice(it){ return Math.max(...it.variants.map(v=>Number(v.price))); }
 function matches(it,q){ if(!q) return true; const hay=[it.name,it.cat,...it.variants.map(v=>`${v.strength} ${v.price}`)].join(" ").toLowerCase(); return hay.includes(q.toLowerCase()); }
-function inCat(it,cat){ return cat==="all"?true:it.cat===cat; }
+function inCat(it,cat){
+  if(cat==="all") return true;
+  return it.cat===cat;
+}
 function getCatLabel(key){ return (CATS.find(c=>c.key===key)||{}).label||key; }
-function sortItems(list,sort){ const a=[...list]; if(sort==="nameAsc") a.sort((x,y)=>x.name.localeCompare(y.name)); if(sort==="nameDesc") a.sort((x,y)=>y.name.localeCompare(x.name)); if(sort==="priceAsc") a.sort((x,y)=>itemMinPrice(x)-itemMinPrice(y)); if(sort==="priceDesc") a.sort((x,y)=>itemMaxPrice(y)-itemMaxPrice(x)); if(sort==="featured"){const rank={healing:1,energy:2,gh:3,cognitive:4,aesthetic:5,fatloss:6,detox:7,tabs:8,supplies:9,kits:10}; a.sort((x,y)=>(rank[x.cat]||99)-(rank[y.cat]||99));} return a; }
+function sortItems(list,sort){ const a=[...list]; if(sort==="nameAsc") a.sort((x,y)=>x.name.localeCompare(y.name)); if(sort==="nameDesc") a.sort((x,y)=>y.name.localeCompare(x.name)); if(sort==="priceAsc") a.sort((x,y)=>itemMinPrice(x)-itemMinPrice(y)); if(sort==="priceDesc") a.sort((x,y)=>itemMaxPrice(y)-itemMaxPrice(x)); if(sort==="featured"){const rank={all:1,regulators:2,detox:3,tabs:4,supplies:5,kits:6}; a.sort((x,y)=>(rank[x.cat]||99)-(rank[y.cat]||99));} return a; }
 
 /* ══ CART PERSISTENCE ══ */
 function cartToArray(){ return [...state.cart.entries()].map(([k,v])=>({key:k,...v})); }
@@ -833,7 +838,7 @@ function render(scrollAfter=false){
 }
 
 function buildSections(){
-  const order=["healing","energy","gh","cognitive","aesthetic","fatloss","detox","tabs","supplies","kits"];
+  const order=["all","regulators","detox","tabs","supplies","kits"];
   return order.map(catKey=>{
     if(state.cat!=="all"&&state.cat!==catKey) return "";
     const group=ITEMS.filter(it=>it.cat===catKey&&matches(it,state.q));
