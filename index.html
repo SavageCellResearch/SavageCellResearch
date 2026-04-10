@@ -323,20 +323,6 @@
   </div>
 </div>
 
-<!-- ══ AGE GATE ══ -->
-<div class="overlay" id="ageGate">
-  <div class="overlay-box">
-    <img src="header.jpg" alt="SavageCell Research" class="overlay-logo" />
-    <h2 class="overlay-title">Age Verification Required</h2>
-    <p class="overlay-sub">This website contains products intended for research use by adults only.<br>You must be <strong>21 years of age or older</strong> to enter.</p>
-    <div class="age-btns">
-      <button class="age-btn" id="ageDeny">I am under 21</button>
-      <button class="age-btn yes" id="ageConfirm">I am 21 or older</button>
-    </div>
-    <div class="overlay-err" id="ageErr"></div>
-  </div>
-</div>
-
 <!-- ══ LANDING PAGE ══ -->
 <div class="landing" id="landingPage">
   <div class="landing-inner">
@@ -714,11 +700,14 @@ document.getElementById("landingSignUpBtn").addEventListener("click",()=>{
 /* ══ AGE GATE ══ */
 const ageGate=document.getElementById("ageGate");
 if(localStorage.getItem("sc_age_verified")==="1") ageGate.classList.add("hidden");
-document.getElementById("ageConfirm").addEventListener("click",()=>{ localStorage.setItem("sc_age_verified","1"); ageGate.classList.add("hidden"); });
-document.getElementById("ageDeny").addEventListener("click",()=>{ document.getElementById("ageErr").textContent="You must be 21+ to access this site."; setTimeout(()=>{ window.location.href="https://www.google.com"; },1200); });
-const ageGate=document.getElementById("ageGate");
-if(localStorage.getItem("sc_age_verified")==="1") ageGate.classList.add("hidden");
-document.getElementById("ageConfirm").addEventListener("click",()=>{ localStorage.setItem("sc_age_verified","1"); ageGate.classList.add("hidden"); });
+document.getElementById("ageConfirm").addEventListener("click",()=>{
+  localStorage.setItem("sc_age_verified","1");
+  ageGate.classList.add("hidden");
+  const user=Auth.current();
+  if(!user){
+    document.getElementById("landingPage").classList.remove("hidden");
+  }
+});
 document.getElementById("ageDeny").addEventListener("click",()=>{ document.getElementById("ageErr").textContent="You must be 21+ to access this site."; setTimeout(()=>{ window.location.href="https://www.google.com"; },1200); });
 
 /* ══ CATALOG DATA ══ */
