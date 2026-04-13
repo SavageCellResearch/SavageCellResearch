@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SavageCell Research • Admin</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root{
+      --bg:#050506;--panel:#0b0c0f;--ink:#f2f2f2;--muted:#a9a9b5;--muted2:#7d7d89;
+      --red:#d0151f;--ember:#ff4d4d;--border:#1c1d24;
+      --green:#4ade80;--yellow:#fbbf24;--blue:#60a5fa;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+    body::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(900px 700px at 85% 10%,rgba(208,21,31,.12),transparent 62%),linear-gradient(180deg,#050506,#07080a);pointer-events:none;}
+
+    /* LOGIN */
+    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .login-box{width:min(420px,100%);border:1px solid rgba(208,21,31,.5);border-radius:24px;background:radial-gradient(600px 400px at 80% 10%,rgba(208,21,31,.18),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));box-shadow:0 36px 95px rgba(0,0,0,.8);padding:36px 28px;text-align:center;}
+    .login-logo{width:100px;height:100px;object-fit:contain;margin:0 auto 16px;border-radius:16px;}
+    .login-title{margin:0 0 4px;font-size:24px;font-weight:980;}
+    .login-sub{color:var(--muted);font-size:13px;margin-bottom:28px;}
+    .f-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;text-align:left;}
+    .f-group label{font-size:12px;color:var(--muted);font-weight:850;letter-spacing:.08em;text-transform:uppercase;}
+    .f-input{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:12px;color:var(--ink);padding:12px 14px;font-size:14px;outline:none;width:100%;}
+    .f-input:focus{border-color:rgba(208,21,31,.85);box-shadow:0 0 0 3px rgba(208,21,31,.12);}
+    .f-input::placeholder{color:rgba(242,242,242,.35);}
+    .btn-login{width:100%;padding:13px;border-radius:12px;border:none;cursor:pointer;font-weight:950;font-size:14px;background:linear-gradient(180deg,rgba(208,21,31,.9),rgba(167,14,22,.9));color:#fff;margin-top:4px;transition:opacity .15s;}
+    .btn-login:hover{opacity:.88;}
+    .btn-login:disabled{opacity:.45;cursor:not-allowed;}
+    .login-err{color:#ff6b6b;font-size:13px;margin-top:10px;min-height:18px;}
+
+    /* ADMIN LAYOUT */
+    .admin-wrap{display:none;}
+    .admin-wrap.visible{display:block;}
+    .topbar{background:#000;border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+    .topbar-left{display:flex;align-items:center;gap:14px;}
+    .topbar-logo{width:44px;height:44px;object-fit:contain;border-radius:10px;}
+    .topbar-title{font-size:16px;font-weight:980;letter-spacing:.2px;}
+    .topbar-sub{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:2px;}
+    .btn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:var(--ink);padding:9px 14px;border-radius:999px;cursor:pointer;font-weight:850;font-size:12px;transition:background .15s,border-color .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+    .btn:hover{border-color:rgba(208,21,31,.7);background:rgba(208,21,31,.1);}
+    .btn.danger{border-color:rgba(208,21,31,.6);background:rgba(208,21,31,.08);color:#ff6b6b;}
+    .btn.danger:hover{background:rgba(208,21,31,.18);}
+    .btn.success{border-color:rgba(74,222,128,.5);background:rgba(74,222,128,.08);color:#4ade80;}
+
+    .admin-body{max-width:1400px;margin:0 auto;padding:24px 20px 60px;}
+
+    /* STATS */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:28px;}
+    @media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media(max-width:480px){.stats-grid{grid-template-columns:1fr;}}
+    .stat-card{border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));border-radius:18px;padding:18px;position:relative;overflow:hidden;}
+    .stat-card::before{content:"";position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;opacity:.15;transform:translate(20px,-20px);}
+    .stat-card.red::before{background:var(--red);}
+    .stat-card.green::before{background:var(--green);}
+    .stat-card.blue::before{background:var(--blue);}
+    .stat-card.yellow::before{background:var(--yellow);}
+    .stat-label{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-weight:850;margin-bottom:8px;}
+    .stat-val{font-size:28px;font-weight:980;letter-spacing:.2px;}
+    .stat-sub{font-size:12px;color:var(--muted2);margin-top:4px;}
+
+    /* TABS */
+    .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:0;}
+    .tab{padding:10px 18px;cursor:pointer;font-size:13px;font-weight:850;color:var(--muted);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;}
+    .tab.active{color:var(--ink);border-bottom-color:var(--red);}
+    .tab:hover{color:var(--ink);}
+
+    /* PANELS */
+    .panel{display:none;}
+    .panel.active{display:block;}
+
+    /* TABLE */
+    .table-wrap{border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    thead{background:rgba(0,0,0,.35);}
+    thead th{padding:12px 14px;text-align:left;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:900;border-bottom:1px solid rgba(255,255,255,.08);}
+    tbody tr{border-bottom:1px solid rgba(255,255,255,.05);transition:background .12s;}
+    tbody tr:hover{background:rgba(255,255,255,.02);}
+    tbody tr:last-child{border-bottom:none;}
+    td{padding:12px 14px;vertical-align:middle;}
+
+    /* BADGES */
+    .badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.06em;}
+    .badge.pending{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);color:#fbbf24;}
+    .badge.confirmed{background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.4);color:#60a5fa;}
+    .badge.shipped{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.4);color:#4ade80;}
+
+    /* INLINE EDIT */
+    .inline-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--ink);padding:6px 10px;font-size:12px;outline:none;width:140px;}
+    .inline-input:focus{border-color:rgba(208,21,31,.7);}
+    .inline-select{background:#0b0c0f;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--ink);padding:6px 10px;font-size:12px;outline:none;}
+    .inline-select:focus{border-color:rgba(208,21,31,.7);}
+
+    /* SEARCH */
+    .search-bar{margin-bottom:16px;}
+    .search-bar input{width:100%;max-width:380px;padding:10px 14px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.03);color:var(--ink);font-size:13px;outline:none;}
+    .search-bar input:focus{border-color:rgba(208,21,31,.7);}
+    .search-bar input::placeholder{color:rgba(242,242,242,.35);}
+
+    .empty-state{padding:40px;text-align:center;color:var(--muted);font-size:14px;}
+    .loading{padding:40px;text-align:center;color:var(--muted);}
+
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+    .section-title{font-size:18px;font-weight:980;}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <img src="header.jpg" alt="SavageCell" class="login-logo" />
+    <h1 class="login-title">Admin Dashboard</h1>
+    <p class="login-sub">SavageCell Research — Restricted Access</p>
+    <div class="f-group"><label>Admin Email</label><input class="f-input" type="email" id="adminEmail" placeholder="admin@example.com" /></div>
+    <div class="f-group"><label>Password</label><input class="f-input" type="password" id="adminPass" placeholder="••••••••" /></div>
+    <button class="btn-login" id="adminLoginBtn">Sign In to Admin</button>
+    <div class="login-err" id="adminErr"></div>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div class="admin-wrap" id="adminWrap">
+  <div class="topbar">
+    <div class="topbar-left">
+      <img src="header.jpg" alt="SavageCell" class="topbar-logo" />
+      <div>
+        <div class="topbar-title">SavageCell Admin</div>
+        <div class="topbar-sub">Dashboard</div>
+      </div>
+    </div>
+    <button class="btn danger" id="adminLogoutBtn">🚪 Sign Out</button>
+  </div>
+
+  <div class="admin-body">
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card red">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-val" id="statRevenue">$0.00</div>
+        <div class="stat-sub">All time</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-val" id="statOrders">0</div>
+        <div class="stat-sub">Submitted orders</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Customers</div>
+        <div class="stat-val" id="statCustomers">0</div>
+        <div class="stat-sub">Registered accounts</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">Avg Order Value</div>
+        <div class="stat-val" id="statAvg">$0.00</div>
+        <div class="stat-sub">Per order</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('orders')">📦 Orders</button>
+      <button class="tab" onclick="switchTab('customers')">👥 Customers</button>
+      <button class="tab" onclick="switchTab('accounts')">🔑 Account Holders</button>
+    </div>
+
+    <!-- ORDERS PANEL -->
+    <div class="panel active" id="panel-orders">
+      <div class="section-head">
+        <div class="section-title">All Orders</div>
+        <button class="btn" onclick="loadOrders()">🔄 Refresh</button>
+      </div>
+      <div class="search-bar"><input type="search" id="orderSearch" placeholder="Search by name, email, status…" oninput="filterOrders()" /></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Items</th>
+              <th>Total</th>
+              <th>Fulfillment</th>
+              <th>Status</th>
+              <th>Tracking #</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody">
+            <tr><td colspan="10" class="loading">Loading orders…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS PANEL -->
+    <div class="panel" id="panel-customers">
+      <div class="section-head">
+        <div class="section-title">Customer Orders</div>
+        <button class="btn" onclick="loadCustomerOrders()">🔄 Refresh</button>
+      </div>
+      <div class="search-bar"><input type="search" id="customerSearch" placeholder="Search by name or email…" oninput="filterCustomers()" /></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Orders</th>
+              <th>Total Spent</th>
+              <th>Last Order</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="customersBody">
+            <tr><td colspan="6" class="loading">Loading customers…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ACCOUNT HOLDERS PANEL -->
+    <div class="panel" id="panel-accounts">
+      <div class="section-head">
+        <div class="section-title">Account Holders</div>
+        <button class="btn" onclick="loadAccounts()">🔄 Refresh</button>
+      </div>
+      <div class="search-bar"><input type="search" id="accountSearch" placeholder="Search by name or email…" oninput="filterAccounts()" /></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Joined</th>
+              <th>Orders</th>
+              <th>Saved Address</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="accountsBody">
+            <tr><td colspan="6" class="loading">Loading accounts…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ══ FIREBASE ══ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDlGMiVVE0fLPS3sWlN9FtQePRTQ4GkeeM",
+  authDomain: "savagecell-research.firebaseapp.com",
+  projectId: "savagecell-research",
+  storageBucket: "savagecell-research.firebasestorage.app",
+  messagingSenderId: "1068551884800",
+  appId: "1:1068551884800:web:bbcc1de9759018858648e5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ══ ADMIN CREDENTIALS
+   Change these to Corey's desired admin email and password ══ */
+const ADMIN_EMAIL = "savagecellresearch@gmail.com";
+const ADMIN_PASSWORD = "SavageAdmin2025!";
+
+/* ══ DATA STORES ══ */
+let allOrders = [];
+let allCustomers = [];
+let allAccounts = [];
+
+const money = (n) => `$${Number(n).toFixed(2)}`;
+const esc = (s) => String(s||"").replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ══ ADMIN LOGIN ══ */
+document.getElementById("adminLoginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("adminEmail").value.trim();
+  const pass = document.getElementById("adminPass").value;
+  const btn = document.getElementById("adminLoginBtn");
+  const err = document.getElementById("adminErr");
+
+  if(email.toLowerCase() !== ADMIN_EMAIL.toLowerCase() || pass !== ADMIN_PASSWORD){
+    err.textContent = "Invalid admin credentials.";
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = "Signing in…";
+  sessionStorage.setItem("sc_admin", "1");
+  showAdmin();
+  btn.disabled = false; btn.textContent = "Sign In to Admin";
+});
+
+document.getElementById("adminEmail").addEventListener("keydown", (e) => { if(e.key==="Enter") document.getElementById("adminLoginBtn").click(); });
+document.getElementById("adminPass").addEventListener("keydown", (e) => { if(e.key==="Enter") document.getElementById("adminLoginBtn").click(); });
+
+document.getElementById("adminLogoutBtn").addEventListener("click", () => {
+  sessionStorage.removeItem("sc_admin");
+  document.getElementById("adminWrap").classList.remove("visible");
+  document.getElementById("loginWrap").style.display = "flex";
+});
+
+function showAdmin(){
+  document.getElementById("loginWrap").style.display = "none";
+  document.getElementById("adminWrap").classList.add("visible");
+  loadAll();
+}
+
+/* ══ LOAD ALL DATA ══ */
+async function loadAll(){
+  await Promise.all([loadOrders(), loadCustomerOrders(), loadAccounts()]);
+  updateStats();
+}
+
+/* ══ ORDERS ══ */
+async function loadOrders(){
+  document.getElementById("ordersBody").innerHTML = `<tr><td colspan="10" class="loading">Loading…</td></tr>`;
+  try{
+    const snap = await db.collection("orders").orderBy("submittedAt","desc").get();
+    allOrders = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderOrders(allOrders);
+  }catch(e){
+    document.getElementById("ordersBody").innerHTML = `<tr><td colspan="10" class="empty-state">Error loading orders. Make sure Firestore rules allow admin access.</td></tr>`;
+  }
+}
+
+function renderOrders(orders){
+  const tbody = document.getElementById("ordersBody");
+  if(!orders.length){ tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No orders yet.</td></tr>`; return; }
+  tbody.innerHTML = orders.map(o => `
+    <tr>
+      <td style="white-space:nowrap;color:var(--muted);font-size:12px;">${esc(o.date||o.submittedAt?.split("T")[0]||"—")}</td>
+      <td style="font-weight:900;">${esc(o.customerName||"—")}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(o.customerEmail||"—")}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(o.customerPhone||"—")}</td>
+      <td style="font-size:12px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.lines||"—")}</td>
+      <td style="font-weight:900;white-space:nowrap;">${money(o.total||0)}</td>
+      <td style="font-size:12px;white-space:nowrap;">${esc(o.fulfillment||o.method||"—")}</td>
+      <td>
+        <select class="inline-select" onchange="updateOrderStatus('${o.id}', this.value)">
+          <option value="Pending" ${(o.status||"Pending")==="Pending"?"selected":""}>Pending</option>
+          <option value="Confirmed" ${o.status==="Confirmed"?"selected":""}>Confirmed</option>
+          <option value="Shipped" ${o.status==="Shipped"?"selected":""}>Shipped</option>
+        </select>
+      </td>
+      <td>
+        <input class="inline-input" type="text" placeholder="Tracking #" value="${esc(o.trackingNumber||"")}" onblur="updateTracking('${o.id}', this.value)" />
+      </td>
+      <td>
+        <button class="btn danger" onclick="deleteOrder('${o.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function filterOrders(){
+  const q = document.getElementById("orderSearch").value.toLowerCase();
+  if(!q){ renderOrders(allOrders); return; }
+  renderOrders(allOrders.filter(o =>
+    (o.customerName||"").toLowerCase().includes(q) ||
+    (o.customerEmail||"").toLowerCase().includes(q) ||
+    (o.status||"").toLowerCase().includes(q) ||
+    (o.lines||"").toLowerCase().includes(q)
+  ));
+}
+
+async function updateOrderStatus(id, status){
+  try{ await db.collection("orders").doc(id).update({status}); }catch(e){ alert("Update failed."); }
+}
+
+async function updateTracking(id, trackingNumber){
+  try{ await db.collection("orders").doc(id).update({trackingNumber}); }catch(e){}
+}
+
+async function deleteOrder(id){
+  if(!confirm("Delete this order? This cannot be undone.")) return;
+  try{
+    await db.collection("orders").doc(id).delete();
+    allOrders = allOrders.filter(o => o.id !== id);
+    renderOrders(allOrders);
+    updateStats();
+  }catch(e){ alert("Delete failed."); }
+}
+
+/* ══ CUSTOMERS (order-based) ══ */
+async function loadCustomerOrders(){
+  document.getElementById("customersBody").innerHTML = `<tr><td colspan="6" class="loading">Loading…</td></tr>`;
+  try{
+    const snap = await db.collection("orders").get();
+    const orders = snap.docs.map(d => d.data());
+    // Group by email
+    const map = {};
+    orders.forEach(o => {
+      const key = (o.customerEmail||"unknown").toLowerCase();
+      if(!map[key]) map[key] = {name:o.customerName||"—", email:key, orders:[], totalSpent:0, lastOrder:"—"};
+      map[key].orders.push(o);
+      map[key].totalSpent += Number(o.total||0);
+      if(!map[key].lastOrder || o.date > map[key].lastOrder) map[key].lastOrder = o.date||"—";
+    });
+    allCustomers = Object.values(map).sort((a,b) => b.totalSpent - a.totalSpent);
+    renderCustomers(allCustomers);
+  }catch(e){
+    document.getElementById("customersBody").innerHTML = `<tr><td colspan="6" class="empty-state">Error loading customers.</td></tr>`;
+  }
+}
+
+function renderCustomers(customers){
+  const tbody = document.getElementById("customersBody");
+  if(!customers.length){ tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No customers yet.</td></tr>`; return; }
+  tbody.innerHTML = customers.map(c => `
+    <tr>
+      <td style="font-weight:900;">${esc(c.name)}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(c.email)}</td>
+      <td style="font-weight:900;">${c.orders.length}</td>
+      <td style="font-weight:900;color:var(--green);">${money(c.totalSpent)}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(c.lastOrder)}</td>
+      <td><a href="mailto:${esc(c.email)}" class="btn" style="font-size:11px;padding:5px 10px;">✉ Email</a></td>
+    </tr>
+  `).join("");
+}
+
+function filterCustomers(){
+  const q = document.getElementById("customerSearch").value.toLowerCase();
+  if(!q){ renderCustomers(allCustomers); return; }
+  renderCustomers(allCustomers.filter(c =>
+    c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
+  ));
+}
+
+/* ══ ACCOUNT HOLDERS ══ */
+async function loadAccounts(){
+  document.getElementById("accountsBody").innerHTML = `<tr><td colspan="6" class="loading">Loading…</td></tr>`;
+  try{
+    const snap = await db.collection("users").get();
+    allAccounts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderAccounts(allAccounts);
+    document.getElementById("statCustomers").textContent = allAccounts.length;
+  }catch(e){
+    document.getElementById("accountsBody").innerHTML = `<tr><td colspan="6" class="empty-state">Error loading accounts.</td></tr>`;
+  }
+}
+
+function renderAccounts(accounts){
+  const tbody = document.getElementById("accountsBody");
+  if(!accounts.length){ tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No accounts yet.</td></tr>`; return; }
+  tbody.innerHTML = accounts.map(a => `
+    <tr>
+      <td style="font-weight:900;">${esc(a.name||"—")}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(a.email||"—")}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(a.createdAt?new Date(a.createdAt).toLocaleDateString():"—")}</td>
+      <td style="font-weight:900;">${(a.orders||[]).length}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(a.shippingAddress||"None saved")}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <a href="mailto:${esc(a.email)}" class="btn" style="font-size:11px;padding:5px 10px;">✉ Email</a>
+        <button class="btn danger" onclick="deleteAccount('${a.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function filterAccounts(){
+  const q = document.getElementById("accountSearch").value.toLowerCase();
+  if(!q){ renderAccounts(allAccounts); return; }
+  renderAccounts(allAccounts.filter(a =>
+    (a.name||"").toLowerCase().includes(q) || (a.email||"").toLowerCase().includes(q)
+  ));
+}
+
+async function deleteAccount(id){
+  if(!confirm("Delete this account? This cannot be undone.")) return;
+  try{
+    await db.collection("users").doc(id).delete();
+    allAccounts = allAccounts.filter(a => a.id !== id);
+    renderAccounts(allAccounts);
+    document.getElementById("statCustomers").textContent = allAccounts.length;
+  }catch(e){ alert("Delete failed."); }
+}
+
+/* ══ STATS ══ */
+function updateStats(){
+  const totalRevenue = allOrders.reduce((a,o) => a + Number(o.total||0), 0);
+  document.getElementById("statRevenue").textContent = money(totalRevenue);
+  document.getElementById("statOrders").textContent = allOrders.length;
+  document.getElementById("statAvg").textContent = allOrders.length ? money(totalRevenue/allOrders.length) : "$0.00";
+}
+
+/* ══ TABS ══ */
+function switchTab(name){
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById(`panel-${name}`).classList.add("active");
+}
+
+/* ══ INIT ══ */
+if(sessionStorage.getItem("sc_admin")==="1") showAdmin();
+</script>
+</body>
+</html>
