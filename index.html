@@ -622,6 +622,7 @@
 const EMAILJS_PUBLIC_KEY  = "NpGW4nQjcw4FgrQmj";
 const EMAILJS_SERVICE_ID  = "service_b5b0nu9";
 const EMAILJS_TEMPLATE_ID = "template_g3cumml";
+const EMAILJS_AUTOREPLY_ID = "template_h2lu5vy";
 
 /* ══ AUTH ══ */
 const Auth = {
@@ -953,11 +954,19 @@ document.getElementById("submitOrder").addEventListener("click",async ()=>{
 
   emailjs.init(EMAILJS_PUBLIC_KEY);
   try {
+    // Send order notification to Corey
     await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{
       customer_name:name, customer_email:email, customer_phone:phone, fulfillment:method,
       cart_lines:cartLines, cart_total:money(t.total), item_count:`${t.count} item(s)`,
       notes:notes||"None", order_date:new Date().toLocaleString(),
       to_email:"orders@savagecellresearch.com"
+    });
+    // Send auto-reply confirmation to customer
+    await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_AUTOREPLY_ID,{
+      customer_name:name, customer_email:email, fulfillment:method,
+      cart_lines:cartLines, cart_total:money(t.total), item_count:`${t.count} item(s)`,
+      order_date:new Date().toLocaleString(),
+      to_email:email
     });
     const user=Auth.current();
     if(user){ Auth.addOrder(user.email,{date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray()}); }
