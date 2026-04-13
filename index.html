@@ -961,21 +961,34 @@ document.getElementById("submitOrder").addEventListener("click",async ()=>{
       notes:notes||"None", order_date:new Date().toLocaleString(),
       to_email:"orders@savagecellresearch.com"
     });
-    // Send auto-reply confirmation to customer
-    await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_AUTOREPLY_ID,{
-      customer_name:name, customer_email:email, fulfillment:method,
-      cart_lines:cartLines, cart_total:money(t.total), item_count:`${t.count} item(s)`,
-      order_date:new Date().toLocaleString(),
-      to_email:email
-    });
-    const user=Auth.current();
-    if(user){ Auth.addOrder(user.email,{date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray()}); }
-    statusEl.className="order-status success"; statusEl.textContent="✅ Order received! You will receive a confirmation email shortly with payment instructions and pickup or delivery details.";
-    state.cart.clear(); persistCart(); renderCart(); toast("Order submitted!");
   } catch(err) {
-    console.error("EmailJS error:",err);
-    statusEl.className="order-status error"; statusEl.textContent="⚠️ Couldn't send — check EmailJS setup or DM us directly.";
+    console.error("Order email error:",err);
+    statusEl.className="order-status error"; statusEl.textContent="⚠️ Couldn't send — check EmailJS setup or contact us directly.";
+    btn.disabled=false; btn.textContent="📨 Send Order to SavageCell";
+    return;
   }
+
+  // Send auto-reply to customer — separate try/catch so it doesn't block success
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_AUTOREPLY_ID,{
+      customer_name:name,
+      customer_email:email,
+      email:email,
+      to_email:email,
+      fulfillment:method,
+      cart_lines:cartLines,
+      cart_total:money(t.total),
+      item_count:`${t.count} item(s)`,
+      order_date:new Date().toLocaleString()
+    });
+  } catch(err) {
+    console.error("Auto-reply error:",err);
+  }
+
+  const user=Auth.current();
+  if(user){ Auth.addOrder(user.email,{date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray()}); }
+  statusEl.className="order-status success"; statusEl.textContent="✅ Order received! You will receive a confirmation email shortly with payment instructions and pickup or delivery details.";
+  state.cart.clear(); persistCart(); renderCart(); toast("Order submitted!");
   btn.disabled=false; btn.textContent="📨 Send Order to SavageCell";
 });
 
