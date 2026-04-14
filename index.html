@@ -165,13 +165,29 @@
     .history-item .h-method{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(208,21,31,.45);background:rgba(208,21,31,.08);color:rgba(242,242,242,.85);display:inline-block;margin-top:6px;}
     .cart-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;font-size:11px;font-weight:900;line-height:1;min-width:18px;height:18px;border-radius:999px;padding:0 5px;margin-left:2px;}
     .cart-badge.hidden{display:none;}
-    .landing{position:fixed;inset:0;z-index:1500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:radial-gradient(900px 700px at 85% 10%,rgba(208,21,31,.18),transparent 62%),radial-gradient(1200px 900px at 50% 120%,rgba(208,21,31,.22),transparent 65%),linear-gradient(180deg,rgba(5,5,6,.97) 0%,rgba(7,8,10,.97) 45%,rgba(90,8,14,.97) 100%);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);overflow:auto;}
+    /* ── LANDING PAGE ── */
+    .landing{position:fixed;inset:0;z-index:1500;overflow-y:auto;background:var(--bg0);}
     .landing.hidden{display:none;}
-    .landing-inner{width:min(460px,100%);display:flex;flex-direction:column;align-items:center;gap:0;}
-    .landing-logo{width:180px;height:180px;object-fit:contain;margin-bottom:8px;filter:drop-shadow(0 0 40px rgba(208,21,31,.35));}
-    .landing-title{margin:0 0 6px;font-size:32px;font-weight:980;letter-spacing:.3px;text-align:center;color:#f2f2f2;}
-    .landing-tagline{margin:0 0 32px;font-size:14px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;text-align:center;}
-    .landing-card{width:100%;border:1px solid rgba(208,21,31,.45);border-radius:24px;background:radial-gradient(700px 400px at 80% 10%,rgba(208,21,31,.14),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));box-shadow:0 36px 95px rgba(0,0,0,.80),0 0 50px rgba(208,21,31,.15);padding:28px 24px;}
+    .landing-topbar{background:rgba(0,0,0,.85);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px);position:sticky;top:0;z-index:10;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:70px;}
+    .landing-topbar-logo{height:44px;object-fit:contain;border-radius:8px;}
+    .landing-topbar-links{display:flex;gap:8px;align-items:center;}
+    .landing-topbar-btn{border:1px solid rgba(255,255,255,.14);background:transparent;color:var(--ink);padding:8px 18px;border-radius:999px;cursor:pointer;font-weight:850;font-size:13px;transition:background .15s,border-color .15s;}
+    .landing-topbar-btn:hover{border-color:rgba(208,21,31,.7);background:rgba(208,21,31,.1);}
+    .landing-topbar-btn.primary{border-color:rgba(208,21,31,.8);background:linear-gradient(180deg,rgba(208,21,31,.28),rgba(208,21,31,.16));}
+    .landing-banner{background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);padding:10px 24px;text-align:center;font-size:12px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:#fff;}
+    .landing-hero{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 110px);max-width:1300px;margin:0 auto;padding:60px 32px;gap:60px;align-items:center;}
+    @media(max-width:800px){.landing-hero{grid-template-columns:1fr;padding:40px 20px;gap:40px;}}
+    .landing-hero-left{}
+    .landing-hero-eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ember);font-weight:900;margin-bottom:16px;}
+    .landing-hero-title{margin:0 0 20px;font-size:clamp(32px,5vw,58px);font-weight:980;line-height:1.05;letter-spacing:.2px;}
+    .landing-hero-title span{color:var(--red);}
+    .landing-hero-desc{color:rgba(242,242,242,.75);font-size:15px;line-height:1.7;margin-bottom:28px;max-width:50ch;}
+    .landing-hero-badges{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:36px;}
+    .landing-badge{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:850;color:var(--muted);letter-spacing:.05em;}
+    .landing-hero-right{display:flex;justify-content:center;}
+    .landing-card{width:min(420px,100%);border:1px solid rgba(208,21,31,.45);border-radius:24px;background:radial-gradient(700px 400px at 80% 10%,rgba(208,21,31,.14),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));box-shadow:0 36px 95px rgba(0,0,0,.80),0 0 50px rgba(208,21,31,.15);padding:32px 28px;}
+    .landing-card-title{font-size:20px;font-weight:980;margin:0 0 6px;text-align:center;}
+    .landing-card-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px;}
     .landing-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid rgba(255,255,255,.10);border-radius:12px;overflow:hidden;}
     .landing-tab{flex:1;padding:11px;border:none;cursor:pointer;font-weight:900;font-size:14px;color:var(--muted);background:transparent;transition:background .15s,color .15s;}
     .landing-tab.active{background:rgba(208,21,31,.18);color:#f2f2f2;box-shadow:inset 0 0 0 1px rgba(208,21,31,.5);}
@@ -209,31 +225,59 @@
 
 <!-- LANDING PAGE -->
 <div class="landing hidden" id="landingPage">
-  <div class="landing-inner">
-    <img src="header.jpg" alt="SavageCell Research" class="landing-logo" />
-    <h1 class="landing-title">SavageCell Research</h1>
-    <p class="landing-tagline">Members Only Catalog</p>
-    <div class="landing-card">
-      <div class="landing-tabs">
-        <button class="landing-tab active" id="tabSignIn" onclick="switchLandingTab('signin')">Sign In</button>
-        <button class="landing-tab" id="tabSignUp" onclick="switchLandingTab('signup')">Create Account</button>
-      </div>
-      <div id="landingSignIn">
-        <div class="f-group"><label>Email</label><input class="f-input" type="email" id="landingEmail" placeholder="you@example.com" /></div>
-        <div class="f-group"><label>Password</label><div class="pw-wrap"><input class="f-input" type="password" id="landingPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('landingPass',this)">👁</button></div></div>
-        <button class="btn-full" id="landingSignInBtn">Sign In →</button>
-        <div class="overlay-err" id="landingSignInErr"></div>
-      </div>
-      <div id="landingSignUp" style="display:none">
-        <div class="f-group"><label>Full Name</label><input class="f-input" type="text" id="landingName" placeholder="Your name" /></div>
-        <div class="f-group"><label>Email</label><input class="f-input" type="email" id="landingSignUpEmail" placeholder="you@example.com" /></div>
-        <div class="f-group"><label>Password (min 6 chars)</label><div class="pw-wrap"><input class="f-input" type="password" id="landingSignUpPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('landingSignUpPass',this)">👁</button></div></div>
-        <button class="btn-full" id="landingSignUpBtn">Create Account →</button>
-        <div class="overlay-err" id="landingSignUpErr"></div>
-      </div>
-      <p class="landing-disclaimer">Must be 21+ to access. Research use only. Not medical advice.</p>
+
+  <!-- Top Bar -->
+  <div class="landing-topbar">
+    <img src="header.jpg" alt="SavageCell Research" class="landing-topbar-logo" />
+    <div class="landing-topbar-links">
+      <button class="landing-topbar-btn" onclick="switchLandingTab('signin');document.getElementById('landingCard').scrollIntoView({behavior:'smooth'})">Sign In</button>
+      <button class="landing-topbar-btn primary" onclick="switchLandingTab('signup');document.getElementById('landingCard').scrollIntoView({behavior:'smooth'})">Create Account</button>
     </div>
   </div>
+
+  <!-- Banner -->
+  <div class="landing-banner">🇺🇸 US Manufactured — Research Use Only</div>
+
+  <!-- Hero -->
+  <div class="landing-hero">
+    <div class="landing-hero-left">
+      <div class="landing-hero-eyebrow">Members Only Catalog</div>
+      <h1 class="landing-hero-title">SavageCell<br><span>Research</span></h1>
+      <p class="landing-hero-desc">Premium research compounds with full transparency. Sign in or create an account for the full experience.</p>
+      <div class="landing-hero-badges">
+        <span class="landing-badge">🇺🇸 US Manufactured</span>
+        <span class="landing-badge">🔬 Research Use Only</span>
+        <span class="landing-badge">🔒 Members Only Access</span>
+        <span class="landing-badge">✅ 21+ Required</span>
+      </div>
+    </div>
+
+    <div class="landing-hero-right">
+      <div class="landing-card" id="landingCard">
+        <div class="landing-card-title">Welcome Back</div>
+        <div class="landing-card-sub">Sign in or create an account for the full experience.</div>
+        <div class="landing-tabs">
+          <button class="landing-tab active" id="tabSignIn" onclick="switchLandingTab('signin')">Sign In</button>
+          <button class="landing-tab" id="tabSignUp" onclick="switchLandingTab('signup')">Create Account</button>
+        </div>
+        <div id="landingSignIn">
+          <div class="f-group"><label>Email</label><input class="f-input" type="email" id="landingEmail" placeholder="you@example.com" /></div>
+          <div class="f-group"><label>Password</label><div class="pw-wrap"><input class="f-input" type="password" id="landingPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('landingPass',this)">👁</button></div></div>
+          <button class="btn-full" id="landingSignInBtn">Sign In →</button>
+          <div class="overlay-err" id="landingSignInErr"></div>
+        </div>
+        <div id="landingSignUp" style="display:none">
+          <div class="f-group"><label>Full Name</label><input class="f-input" type="text" id="landingName" placeholder="Your name" /></div>
+          <div class="f-group"><label>Email</label><input class="f-input" type="email" id="landingSignUpEmail" placeholder="you@example.com" /></div>
+          <div class="f-group"><label>Password (min 6 chars)</label><div class="pw-wrap"><input class="f-input" type="password" id="landingSignUpPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('landingSignUpPass',this)">👁</button></div></div>
+          <button class="btn-full" id="landingSignUpBtn">Create Account →</button>
+          <div class="overlay-err" id="landingSignUpErr"></div>
+        </div>
+        <p class="landing-disclaimer">Must be 21+ to access. Research use only. Not medical advice.</p>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- AUTH OVERLAY -->
@@ -468,10 +512,11 @@ async function sendOrderEmails(data){
 }
 
 /* ══ SESSION ══ */
+// Use sessionStorage so session clears when tab/browser closes
 let currentUser = null;
-function getSession(){ try{ return JSON.parse(localStorage.getItem("sc_session")||"null"); }catch(e){return null;} }
-function setSession(u){ localStorage.setItem("sc_session", JSON.stringify(u)); currentUser=u; }
-function clearSession(){ localStorage.removeItem("sc_session"); currentUser=null; }
+function getSession(){ try{ return JSON.parse(sessionStorage.getItem("sc_session")||"null"); }catch(e){return null;} }
+function setSession(u){ sessionStorage.setItem("sc_session", JSON.stringify(u)); currentUser=u; }
+function clearSession(){ sessionStorage.removeItem("sc_session"); currentUser=null; }
 
 /* ══ AUTH (Firebase) ══ */
 const Auth = {
