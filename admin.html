@@ -266,6 +266,17 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+const WORKER_URL = "https://savagecell-mailer.jasminegalanon.workers.dev";
+
+async function sendWorkerEmail(type, data){
+  const res = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, data })
+  });
+  if(!res.ok) throw new Error("Worker error");
+}
+
 /* ══ ADMIN CREDENTIALS
    Change these to Corey's desired admin email and password ══ */
 const ADMIN_EMAIL = "savagecellresearch@gmail.com";
@@ -354,6 +365,7 @@ function renderOrders(orders){
       </td>
       <td>
         <button class="btn danger" onclick="deleteOrder('${o.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
+        <button class="btn success" onclick="sendTracking('${o.id}')" style="font-size:11px;padding:5px 10px;margin-top:4px;">📦 Send Tracking</button>
       </td>
     </tr>
   `).join("");
@@ -371,7 +383,31 @@ function filterOrders(){
 }
 
 async function updateOrderStatus(id, status){
-  try{ await db.collection("orders").doc(id).update({status}); }catch(e){ alert("Update failed."); }
+  try{
+    await db.collection("orders").doc(id).update({status});
+    // Auto-send receipt when marked Confirmed
+    if(status === "Confirmed"){
+      const order = allOrders.find(o => o.id === id);
+      if(order && order.customerEmail){
+        const paymentMethod = prompt("Payment method for receipt (e.g. Zelle, Cash App, Venmo):", "Zelle");
+        if(paymentMethod){
+          const receiptNumber = `SCR-${Date.now().toString().slice(-6)}`;
+          try{
+            await sendWorkerEmail("receipt", {
+              customerName: order.customerName||"Customer",
+              customerEmail: order.customerEmail,
+              receiptNumber,
+              datePaid: new Date().toLocaleDateString(),
+              paymentMethod,
+              orderLines: order.lines||order.cartLines||"—",
+              amountPaid: `$${Number(order.total||0).toFixed(2)}`
+            });
+            alert("✅ Order confirmed and receipt sent to customer!");
+          }catch(e){ alert("Order confirmed but receipt email failed."); }
+        }
+      }
+    }
+  }catch(e){ alert("Status update failed."); }
 }
 
 async function updateTracking(id, trackingNumber){
@@ -480,6 +516,48 @@ async function deleteAccount(id){
     renderAccounts(allAccounts);
     document.getElementById("statCustomers").textContent = allAccounts.length;
   }catch(e){ alert("Delete failed."); }
+}
+
+async function sendTracking(id){
+  const order = allOrders.find(o => o.id === id);
+  if(!order) return;
+  if(!order.trackingNumber){ alert("Please enter a tracking number first."); return; }
+  if(!order.customerEmail){ alert("No customer email on this order."); return; }
+  if(!confirm(`Send tracking number "${order.trackingNumber}" to ${order.customerEmail}?`)) return;
+  try{
+    await sendWorkerEmail("tracking", {
+      customerName: order.customerName||"Customer",
+      customerEmail: order.customerEmail,
+      trackingNumber: order.trackingNumber,
+      orderLines: order.lines||order.cartLines||"—",
+      orderTotal: `$${Number(order.total||0).toFixed(2)}`
+    });
+    alert("✅ Tracking email sent!");
+  }catch(e){ alert("Failed to send tracking email."); }
+}
+
+async function sendReceipt(id){
+  const order = allOrders.find(o => o.id === id);
+  if(!order) return;
+  if(!order.customerEmail){ alert("No customer email on this order."); return; }
+  const paymentMethod = prompt("Payment method (e.g. Zelle, Cash App, Venmo):", "Zelle");
+  if(!paymentMethod) return;
+  const receiptNumber = `SCR-${Date.now().toString().slice(-6)}`;
+  try{
+    await sendWorkerEmail("receipt", {
+      customerName: order.customerName||"Customer",
+      customerEmail: order.customerEmail,
+      receiptNumber,
+      datePaid: new Date().toLocaleDateString(),
+      paymentMethod,
+      orderLines: order.lines||order.cartLines||"—",
+      amountPaid: `$${Number(order.total||0).toFixed(2)}`
+    });
+    // Update order status to Confirmed
+    await db.collection("orders").doc(id).update({status:"Confirmed"});
+    await loadOrders();
+    alert("✅ Receipt sent and order marked as Confirmed!");
+  }catch(e){ alert("Failed to send receipt."); }
 }
 
 /* ══ STATS ══ */
