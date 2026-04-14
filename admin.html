@@ -90,7 +90,8 @@
     col.col-total{width:70px;}
     col.col-fulfill{width:100px;}
     col.col-status{width:130px;}
-    col.col-tracking{width:120px;}
+    col.col-tracking{width:110px;}
+    col.col-carrier{width:90px;}
     col.col-actions{width:200px;}
 
     /* BADGES */
@@ -191,7 +192,7 @@
           <colgroup>
             <col class="col-date"/><col class="col-customer"/><col class="col-email"/>
             <col class="col-items"/><col class="col-total"/><col class="col-fulfill"/>
-            <col class="col-status"/><col class="col-tracking"/><col class="col-actions"/>
+            <col class="col-status"/><col class="col-tracking"/><col class="col-carrier"/><col class="col-actions"/>
           </colgroup>
           <thead>
             <tr>
@@ -203,6 +204,7 @@
               <th>Fulfillment</th>
               <th>Status</th>
               <th>Tracking #</th>
+              <th>Carrier</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -377,8 +379,10 @@ function renderOrders(orders){
       </td>
       <td>
         <input class="inline-input" type="text" placeholder="Tracking #" data-tracking-id="${o.id}" value="${esc(o.trackingNumber||"")}" onblur="updateTracking('${o.id}', this.value)" />
-        <select class="inline-select" data-carrier-id="${o.id}" style="margin-top:4px;width:100%;" onchange="updateCarrier('${o.id}', this.value)">
-          <option value="" ${!o.carrier?"selected":""}>Carrier...</option>
+      </td>
+      <td>
+        <select class="inline-select" data-carrier-id="${o.id}" style="width:100%;" onchange="updateCarrier('${o.id}', this.value)">
+          <option value="" ${!o.carrier?"selected":""}>Select...</option>
           <option value="USPS" ${o.carrier==="USPS"?"selected":""}>USPS</option>
           <option value="UPS" ${o.carrier==="UPS"?"selected":""}>UPS</option>
           <option value="FedEx" ${o.carrier==="FedEx"?"selected":""}>FedEx</option>
