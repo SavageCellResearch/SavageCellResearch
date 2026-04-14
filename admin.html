@@ -377,6 +377,14 @@ function renderOrders(orders){
       </td>
       <td>
         <input class="inline-input" type="text" placeholder="Tracking #" data-tracking-id="${o.id}" value="${esc(o.trackingNumber||"")}" onblur="updateTracking('${o.id}', this.value)" />
+        <select class="inline-select" data-carrier-id="${o.id}" style="margin-top:4px;width:100%;" onchange="updateCarrier('${o.id}', this.value)">
+          <option value="" ${!o.carrier?"selected":""}>Carrier...</option>
+          <option value="USPS" ${o.carrier==="USPS"?"selected":""}>USPS</option>
+          <option value="UPS" ${o.carrier==="UPS"?"selected":""}>UPS</option>
+          <option value="FedEx" ${o.carrier==="FedEx"?"selected":""}>FedEx</option>
+          <option value="DHL" ${o.carrier==="DHL"?"selected":""}>DHL</option>
+          <option value="Other" ${o.carrier==="Other"?"selected":""}>Other</option>
+        </select>
       </td>
       <td>
         <div style="display:flex;flex-direction:column;gap:4px;">
@@ -425,6 +433,10 @@ async function updateOrderStatus(id, status){
       }
     }
   }catch(e){ alert("Status update failed."); }
+}
+
+async function updateCarrier(id, carrier){
+  try{ await db.collection("orders").doc(id).update({carrier}); }catch(e){}
 }
 
 async function updateTracking(id, trackingNumber){
@@ -538,19 +550,20 @@ async function deleteAccount(id){
 async function sendTracking(id){
   const order = allOrders.find(o => o.id === id);
   if(!order) return;
-  // Read tracking number directly from the input field
   const inputEl = document.querySelector(`input[data-tracking-id="${id}"]`);
+  const carrierEl = document.querySelector(`select[data-carrier-id="${id}"]`);
   const trackingNumber = inputEl ? inputEl.value.trim() : order.trackingNumber;
+  const carrier = carrierEl ? carrierEl.value : order.carrier||"";
   if(!trackingNumber){ alert("Please enter a tracking number first."); return; }
   if(!order.customerEmail){ alert("No customer email on this order."); return; }
-  if(!confirm(`Send tracking number "${trackingNumber}" to ${order.customerEmail}?`)) return;
-  // Save it to Firebase first
-  try{ await db.collection("orders").doc(id).update({trackingNumber}); }catch(e){}
+  if(!confirm(`Send tracking number "${trackingNumber}" via ${carrier||"carrier"} to ${order.customerEmail}?`)) return;
+  try{ await db.collection("orders").doc(id).update({trackingNumber, carrier}); }catch(e){}
   try{
     await sendWorkerEmail("tracking", {
       customerName: order.customerName||"Customer",
       customerEmail: order.customerEmail,
       trackingNumber,
+      carrier: carrier||"your carrier",
       orderLines: order.lines||order.cartLines||"—",
       orderTotal: `$${Number(order.total||0).toFixed(2)}`
     });
