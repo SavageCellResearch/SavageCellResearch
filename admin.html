@@ -356,8 +356,9 @@ function renderOrders(orders){
       <td>
         <select class="inline-select" onchange="updateOrderStatus('${o.id}', this.value)">
           <option value="Pending" ${(o.status||"Pending")==="Pending"?"selected":""}>Pending</option>
-          <option value="Confirmed" ${o.status==="Confirmed"?"selected":""}>Confirmed</option>
+          <option value="Payment Confirmed" ${o.status==="Payment Confirmed"?"selected":""}>Payment Confirmed</option>
           <option value="Shipped" ${o.status==="Shipped"?"selected":""}>Shipped</option>
+          <option value="Picked Up" ${o.status==="Picked Up"?"selected":""}>Picked Up</option>
         </select>
       </td>
       <td>
@@ -386,7 +387,7 @@ async function updateOrderStatus(id, status){
   try{
     await db.collection("orders").doc(id).update({status});
     // Auto-send receipt when marked Confirmed
-    if(status === "Confirmed"){
+    if(status === "Payment Confirmed"){
       const order = allOrders.find(o => o.id === id);
       if(order && order.customerEmail){
         const paymentMethod = prompt("Payment method for receipt (e.g. Zelle, Cash App, Venmo):", "Zelle");
