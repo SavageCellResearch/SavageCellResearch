@@ -191,6 +191,12 @@
     .landing-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid rgba(255,255,255,.10);border-radius:12px;overflow:hidden;}
     .landing-tab{flex:1;padding:11px;border:none;cursor:pointer;font-weight:900;font-size:14px;color:var(--muted);background:transparent;transition:background .15s,color .15s;}
     .landing-tab.active{background:rgba(208,21,31,.18);color:#f2f2f2;box-shadow:inset 0 0 0 1px rgba(208,21,31,.5);}
+    
+    .check-group{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;}
+    .check-group input[type="checkbox"]{width:18px;height:18px;margin-top:2px;accent-color:var(--red);cursor:pointer;flex-shrink:0;}
+    .check-group label{font-size:13px;color:var(--muted);line-height:1.45;cursor:pointer;}
+    .check-group label span{color:var(--ember);font-weight:900;}
+
     .landing-disclaimer{margin-top:16px;font-size:11px;color:var(--muted2);text-align:center;line-height:1.5;}
     .loading-overlay{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(5,5,6,.95);}
     .loading-overlay.hidden{display:none;}
@@ -270,6 +276,10 @@
           <div class="f-group"><label>Full Name</label><input class="f-input" type="text" id="landingName" placeholder="Your name" /></div>
           <div class="f-group"><label>Email</label><input class="f-input" type="email" id="landingSignUpEmail" placeholder="you@example.com" /></div>
           <div class="f-group"><label>Password (min 6 chars)</label><div class="pw-wrap"><input class="f-input" type="password" id="landingSignUpPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('landingSignUpPass',this)">👁</button></div></div>
+          <div class="check-group">
+            <input type="checkbox" id="landingAgeCheck" />
+            <label for="landingAgeCheck">I confirm that I am <span>21 years of age or older</span> and agree to use this site for research purposes only.</label>
+          </div>
           <button class="btn-full" id="landingSignUpBtn">Create Account →</button>
           <div class="overlay-err" id="landingSignUpErr"></div>
         </div>
@@ -712,6 +722,7 @@ document.getElementById("loginBtn").addEventListener("click",async()=>{
 
 document.getElementById("signupBtn").addEventListener("click",async()=>{
   const name=document.getElementById("signupName").value.trim(),email=document.getElementById("signupEmail").value.trim(),pass=document.getElementById("signupPass").value;
+  if(!document.getElementById("overlayAgeCheck").checked){document.getElementById("signupErr").textContent="You must confirm you are 21 or older.";return;}
   const btn=document.getElementById("signupBtn"); btn.disabled=true; btn.textContent="Creating…";
   const res=await Auth.signup(name,email,pass);
   btn.disabled=false; btn.textContent="Create Account";
@@ -757,6 +768,7 @@ document.getElementById("landingSignInBtn").addEventListener("click",async()=>{
 
 document.getElementById("landingSignUpBtn").addEventListener("click",async()=>{
   const name=document.getElementById("landingName").value.trim(),email=document.getElementById("landingSignUpEmail").value.trim(),pass=document.getElementById("landingSignUpPass").value;
+  if(!document.getElementById("landingAgeCheck").checked){document.getElementById("landingSignUpErr").textContent="You must confirm you are 21 or older.";return;}
   const btn=document.getElementById("landingSignUpBtn");btn.disabled=true;btn.textContent="Creating…";
   const res=await Auth.signup(name,email,pass);
   btn.disabled=false;btn.textContent="Create Account →";
