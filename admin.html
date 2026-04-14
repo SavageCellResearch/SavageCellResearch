@@ -91,7 +91,7 @@
     col.col-fulfill{width:100px;}
     col.col-status{width:130px;}
     col.col-tracking{width:120px;}
-    col.col-actions{width:150px;}
+    col.col-actions{width:200px;}
 
     /* BADGES */
     .badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.06em;}
@@ -379,8 +379,10 @@ function renderOrders(orders){
         <input class="inline-input" type="text" placeholder="Tracking #" data-tracking-id="${o.id}" value="${esc(o.trackingNumber||"")}" onblur="updateTracking('${o.id}', this.value)" />
       </td>
       <td>
-        <button class="btn danger" onclick="deleteOrder('${o.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
-        <button class="btn success" onclick="sendTracking('${o.id}')" style="font-size:11px;padding:5px 10px;margin-top:4px;">📦 Send Tracking</button>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <button class="btn danger" onclick="deleteOrder('${o.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
+          <button class="btn success" onclick="sendTracking('${o.id}')" style="font-size:11px;padding:5px 10px;">📦 Send Tracking</button>
+        </div>
       </td>
     </tr>
   `).join("");
