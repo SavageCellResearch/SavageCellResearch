@@ -361,7 +361,7 @@ function renderOrders(orders){
         </select>
       </td>
       <td>
-        <input class="inline-input" type="text" placeholder="Tracking #" value="${esc(o.trackingNumber||"")}" onblur="updateTracking('${o.id}', this.value)" />
+        <input class="inline-input" type="text" placeholder="Tracking #" data-tracking-id="${o.id}" value="${esc(o.trackingNumber||"")}" onblur="updateTracking('${o.id}', this.value)" />
       </td>
       <td>
         <button class="btn danger" onclick="deleteOrder('${o.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
@@ -521,14 +521,19 @@ async function deleteAccount(id){
 async function sendTracking(id){
   const order = allOrders.find(o => o.id === id);
   if(!order) return;
-  if(!order.trackingNumber){ alert("Please enter a tracking number first."); return; }
+  // Read tracking number directly from the input field
+  const inputEl = document.querySelector(`input[data-tracking-id="${id}"]`);
+  const trackingNumber = inputEl ? inputEl.value.trim() : order.trackingNumber;
+  if(!trackingNumber){ alert("Please enter a tracking number first."); return; }
   if(!order.customerEmail){ alert("No customer email on this order."); return; }
-  if(!confirm(`Send tracking number "${order.trackingNumber}" to ${order.customerEmail}?`)) return;
+  if(!confirm(`Send tracking number "${trackingNumber}" to ${order.customerEmail}?`)) return;
+  // Save it to Firebase first
+  try{ await db.collection("orders").doc(id).update({trackingNumber}); }catch(e){}
   try{
     await sendWorkerEmail("tracking", {
       customerName: order.customerName||"Customer",
       customerEmail: order.customerEmail,
-      trackingNumber: order.trackingNumber,
+      trackingNumber,
       orderLines: order.lines||order.cartLines||"—",
       orderTotal: `$${Number(order.total||0).toFixed(2)}`
     });
