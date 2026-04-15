@@ -120,6 +120,7 @@
     col.col-email{width:130px;}
     col.col-items{width:100px;}
     col.col-total{width:70px;}
+    col.col-payment{width:80px;}
     col.col-fulfill{width:100px;}
     col.col-status{width:130px;}
     col.col-tracking{width:110px;}
@@ -242,7 +243,7 @@
         <table>
           <colgroup>
             <col class="col-date"/><col class="col-customer"/><col class="col-email"/>
-            <col class="col-items"/><col class="col-total"/><col class="col-fulfill"/>
+            <col class="col-items"/><col class="col-total"/><col class="col-payment"/><col class="col-fulfill"/>
             <col class="col-status"/><col class="col-tracking"/><col class="col-carrier"/><col class="col-actions"/>
           </colgroup>
           <thead>
@@ -252,6 +253,7 @@
               <th>Email</th>
               <th>Items</th>
               <th>Total</th>
+              <th>Payment</th>
               <th>Fulfillment</th>
               <th>Status</th>
               <th>Tracking #</th>
@@ -419,6 +421,7 @@ function renderOrders(orders){
       <td><span class="truncate" title="${esc(o.customerEmail||"—")}" style="color:var(--muted);font-size:11px;">${esc(o.customerEmail||"—")}</span></td>
       <td><span class="truncate" title="${esc(o.lines||"—")}" style="font-size:11px;">${esc(o.lines||"—")}</span></td>
       <td style="font-weight:900;white-space:nowrap;">${money(o.total||0)}</td>
+      <td style="font-size:11px;font-weight:900;">${esc(o.paymentMethod||"—")}</td>
       <td><span class="truncate" title="${esc(o.fulfillment||o.method||"—")}" style="font-size:11px;">${esc(o.fulfillment||o.method||"—")}</span></td>
       <td>
         <select class="inline-select" onchange="updateOrderStatus('${o.id}', this.value)">
