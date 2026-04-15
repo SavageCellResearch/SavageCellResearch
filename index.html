@@ -700,6 +700,7 @@ function setFulfillment(mode){
   document.getElementById("pickupBtn").dataset.active=String(mode==="pickup");
   document.getElementById("shipBtn").dataset.active=String(mode==="ship");
   document.getElementById("shipAddressWrap").style.display=mode==="ship"?"block":"none";
+  renderCart();
   // Cash only available for pickup
   const cashBtn=document.getElementById("cashBtn");
   if(cashBtn){
@@ -985,7 +986,13 @@ function addToCart(item,variant){const key=cartKey(item,variant),cur=state.cart.
 function decCart(key){const cur=state.cart.get(key);if(!cur)return;cur.qty-=1;if(cur.qty<=0)state.cart.delete(key);persistCart();renderCart();}
 function incCart(key){const cur=state.cart.get(key);if(!cur)return;cur.qty+=1;persistCart();renderCart();}
 function clearCart(){state.cart.clear();persistCart();renderCart();}
-function computeTotals(){const items=[...state.cart.values()];return{subtotal:items.reduce((a,x)=>a+x.unitPrice*x.qty,0),total:items.reduce((a,x)=>a+x.unitPrice*x.qty,0),count:items.reduce((a,x)=>a+x.qty,0),lines:items.length};}
+function computeTotals(){
+  const items=[...state.cart.values()];
+  const subtotal=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
+  const shipping=state.fulfillment==="ship"?15:0;
+  const total=subtotal+shipping;
+  return{subtotal,shipping,total,count:items.reduce((a,x)=>a+x.qty,0),lines:items.length};
+}
 
 function renderCart(){
   const list=document.getElementById("cartList");list.innerHTML="";
@@ -997,6 +1004,12 @@ function renderCart(){
   document.getElementById("subTotal").textContent=money(t.subtotal);
   document.getElementById("grandTotal").textContent=money(t.total);
   document.getElementById("subMeta").textContent=`${t.count} item${t.count===1?"":"s"}`;
+  // Shipping line
+  const shippingRow=document.getElementById("shippingRow");
+  if(shippingRow){
+    if(t.shipping>0){shippingRow.style.display="flex";}
+    else{shippingRow.style.display="none";}
+  }
   const badge=document.getElementById("cartBadge");
   if(t.count>0){badge.textContent=t.count;badge.classList.remove("hidden");}else{badge.classList.add("hidden");}
 }
