@@ -393,7 +393,7 @@
           <div class="cart-list" id="cartList"></div>
           <div class="totals">
             <div class="tile"><b>Subtotal</b><div class="val" id="subTotal">$0.00</div><div class="sub" id="subMeta">—</div></div>
-            <div class="tile"><b>Total</b><div class="val" id="grandTotal">$0.00</div><div class="sub">+ any shipping</div></div>
+            <div class="tile"><b>Total</b><div class="val" id="grandTotal">$0.00</div><div class="sub" id="totalSub">—</div></div>
           </div>
         </div>
         <div class="divider"></div>
@@ -1007,7 +1007,7 @@ function renderCart(){
   // Shipping line
   const shippingRow=document.getElementById("shippingRow");
   if(shippingRow){
-    shippingRow.style.display=t.shipping>0?"flex":"none";
+    shippingRow.style.display=t.shipping>0?"block":"none";
   }
   // Update total sub text
   const totalSubEl=document.getElementById("totalSub");
