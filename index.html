@@ -905,7 +905,8 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
       fulfillment:method, cartLines, cartTotal:money(t.total),
       itemCount:`${t.count} item(s)`, notes:notes||"None",
       orderDate:new Date().toLocaleString(),
-      paymentMethod:state.paymentMethod
+      paymentMethod:state.paymentMethod,
+      shipping:t.shipping
     });
   }catch(err){
     console.error("Email error:",err);
