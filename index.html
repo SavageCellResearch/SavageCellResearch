@@ -587,7 +587,7 @@ const Auth = {
       orders.unshift(order);
       await db.collection("users").doc(key).update({orders});
       // Also save to global orders collection for admin
-      await db.collection("orders").add({...order, customerEmail:email, customerName:currentUser?.name||"", submittedAt:new Date().toISOString()});
+      await db.collection("orders").add({...order, customerEmail:email, customerName:order.customerName||currentUser?.name||email, submittedAt:order.submittedAt||new Date().toISOString()});
     }catch(e){}
   },
   async getOrders(email){
