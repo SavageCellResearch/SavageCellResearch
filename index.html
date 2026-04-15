@@ -409,12 +409,23 @@
           </div>
         </div>
         <div class="divider"></div>
+        <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Payment Method</b>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;" id="paymentMethodGrid">
+          <button class="f-toggle-btn" data-active="false" data-method="Venmo" onclick="setPayment(this)">💜 Venmo</button>
+          <button class="f-toggle-btn" data-active="false" data-method="Cash App" onclick="setPayment(this)">💚 Cash App</button>
+          <button class="f-toggle-btn" data-active="false" data-method="PayPal" onclick="setPayment(this)">🔵 PayPal</button>
+          <button class="f-toggle-btn" data-active="false" data-method="Apple Pay" onclick="setPayment(this)">🍎 Apple Pay</button>
+          <button class="f-toggle-btn" data-active="false" data-method="Bitcoin" onclick="setPayment(this)">₿ Bitcoin</button>
+          <button class="f-toggle-btn" data-active="false" data-method="USDC" onclick="setPayment(this)">🔷 USDC</button>
+          <button class="f-toggle-btn" data-active="false" data-method="Cash" onclick="setPayment(this)" id="cashBtn">💵 Cash</button>
+        </div>
+        <div class="divider"></div>
         <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Submit Order</b>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
           <div class="f-group" style="margin-bottom:0;"><label style="font-size:12px;color:var(--muted);font-weight:850;">Your Name</label><input class="f-input" id="orderName" placeholder="Full name" style="font-size:13px;padding:10px 14px;" /></div>
           <div class="f-group" style="margin-bottom:0;"><label style="font-size:12px;color:var(--muted);font-weight:850;">Your Email</label><input class="f-input" id="orderEmail" type="email" placeholder="you@example.com" style="font-size:13px;padding:10px 14px;" /></div>
           <div class="f-group" style="margin-bottom:0;"><label style="font-size:12px;color:var(--muted);font-weight:850;">Phone Number</label><input class="f-input" id="orderPhone" type="tel" placeholder="(555) 555-5555" style="font-size:13px;padding:10px 14px;" /></div>
-          <div class="f-group" style="margin-bottom:0;"><label style="font-size:12px;color:var(--muted);font-weight:850;">Notes (optional)</label><input class="f-input" id="orderNotes" placeholder="Any special instructions…" style="font-size:13px;padding:10px 14px;" /></div>
+          <div class="f-group" style="margin-bottom:0;"><label style="font-size:12px;color:var(--muted);font-weight:850;">Notes (optional)</label><input class="f-input" id="orderNotes" placeholder="Note: Please do not include product names in this field." style="font-size:13px;padding:10px 14px;" /></div>
           <button class="btn primary" id="submitOrder" style="width:100%;justify-content:center;padding:13px;margin-top:4px;">📨 Send Order to SavageCell</button>
         </div>
       </div>
@@ -664,7 +675,7 @@ const ITEMS=[
   {id:"kitfull",name:"Water + syr + wipes + recon",cat:"kits",variants:[{strength:"kit",price:35}]},
 ];
 
-const state={cat:"all",q:"",sort:"featured",sectionView:false,detail:null,cart:new Map(),fulfillment:"pickup"};
+const state={cat:"all",q:"",sort:"featured",sectionView:false,detail:null,cart:new Map(),fulfillment:"pickup",paymentMethod:""};
 const money=(n)=>`$${Number(n).toFixed(2)}`;
 const esc=(s)=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>el.style.display="none",1400);}
@@ -681,7 +692,25 @@ function cartFromArray(arr){state.cart.clear();(arr||[]).forEach(({key,...v})=>s
 async function persistCart(){const user=getSession();if(user)await Auth.saveCart(user.email,cartToArray());}
 
 /* ══ FULFILLMENT ══ */
-function setFulfillment(mode){state.fulfillment=mode;document.getElementById("pickupBtn").dataset.active=String(mode==="pickup");document.getElementById("shipBtn").dataset.active=String(mode==="ship");document.getElementById("shipAddressWrap").style.display=mode==="ship"?"block":"none";}
+function setFulfillment(mode){
+  state.fulfillment=mode;
+  document.getElementById("pickupBtn").dataset.active=String(mode==="pickup");
+  document.getElementById("shipBtn").dataset.active=String(mode==="ship");
+  document.getElementById("shipAddressWrap").style.display=mode==="ship"?"block":"none";
+  // Cash only available for pickup
+  const cashBtn=document.getElementById("cashBtn");
+  if(cashBtn){
+    cashBtn.style.display=mode==="ship"?"none":"block";
+    if(mode==="ship"&&state.paymentMethod==="Cash"){state.paymentMethod="";document.querySelectorAll("[data-method]").forEach(b=>b.dataset.active="false");}
+  }
+}
+
+/* ══ PAYMENT METHOD ══ */
+function setPayment(btn){
+  document.querySelectorAll("[data-method]").forEach(b=>b.dataset.active="false");
+  btn.dataset.active="true";
+  state.paymentMethod=btn.dataset.method;
+}
 
 /* ══ AUTH UI ══ */
 function updateAuthBtn(){const user=getSession();document.getElementById("authBtn").textContent=user?`👤 ${user.name.split(" ")[0]}`:"👤 Sign In";}
@@ -855,6 +884,7 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
 
   if(!name||!email){statusEl.className="order-status error";statusEl.textContent="Please enter your name and email.";return;}
   if(!phone){statusEl.className="order-status error";statusEl.textContent="Please enter your phone number.";return;}
+  if(!state.paymentMethod){statusEl.className="order-status error";statusEl.textContent="Please select a payment method.";return;}
   if(state.cart.size===0){statusEl.className="order-status error";statusEl.textContent="Your cart is empty.";return;}
   if(state.fulfillment==="ship"&&!addr){statusEl.className="order-status error";statusEl.textContent="Please enter a shipping address.";return;}
 
@@ -870,7 +900,8 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
       customerName:name, customerEmail:email, customerPhone:phone,
       fulfillment:method, cartLines, cartTotal:money(t.total),
       itemCount:`${t.count} item(s)`, notes:notes||"None",
-      orderDate:new Date().toLocaleString()
+      orderDate:new Date().toLocaleString(),
+      paymentMethod:state.paymentMethod
     });
   }catch(err){
     console.error("Email error:",err);
@@ -879,7 +910,7 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   }
 
   const user=getSession();
-  const orderRecord={date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray(),customerName:name,customerEmail:email,customerPhone:phone,fulfillment:method,cartLines,status:"Pending",trackingNumber:"",submittedAt:new Date().toISOString()};
+  const orderRecord={date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray(),customerName:name,customerEmail:email,customerPhone:phone,fulfillment:method,cartLines,paymentMethod:state.paymentMethod,status:"Pending",trackingNumber:"",submittedAt:new Date().toISOString()};
   if(user) await Auth.addOrder(user.email,orderRecord);
 
   statusEl.className="order-status success";statusEl.textContent="✅ Order received! You will receive a confirmation email shortly with payment instructions and pickup or delivery details.";
