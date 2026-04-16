@@ -214,6 +214,65 @@
       </div>
     </div>
 
+    
+    <!-- DISCOUNT CODES PANEL -->
+    <div class="panel" id="panel-discounts">
+      <div class="section-head">
+        <div class="section-title">Discount Codes</div>
+        <button class="btn" onclick="loadDiscounts()">🔄 Refresh</button>
+      </div>
+
+      <!-- Create new code -->
+      <div style="border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;margin-bottom:20px;background:rgba(255,255,255,.02);">
+        <div style="font-size:13px;font-weight:980;margin-bottom:12px;letter-spacing:.05em;">➕ Create New Code</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Code</div>
+            <input class="inline-input" id="newCode" placeholder="e.g. SAVE10" style="width:100%;text-transform:uppercase;" maxlength="20" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">% Off</div>
+            <input class="inline-input" id="newPct" type="number" placeholder="10" min="1" max="100" style="width:100%;" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Expires (optional)</div>
+            <input class="inline-input" id="newExpiry" type="date" style="width:100%;color-scheme:dark;" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Use Limit (optional)</div>
+            <input class="inline-input" id="newLimit" type="number" placeholder="∞" min="1" style="width:100%;" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;">
+              <input type="checkbox" id="newSingleUse" style="accent-color:var(--red);" /> Single use
+            </label>
+            <button class="btn success" onclick="createDiscount()" style="white-space:nowrap;">✅ Create</button>
+          </div>
+        </div>
+        <div id="discountCreateMsg" style="font-size:12px;min-height:16px;margin-top:8px;"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>% Off</th>
+              <th>Expires</th>
+              <th>Use Limit</th>
+              <th>Used</th>
+              <th>Single Use</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="discountsBody">
+            <tr><td colspan="8" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- STATS MODAL -->
     <div class="modal-backdrop" id="statModal">
       <div class="modal">
@@ -230,6 +289,7 @@
       <button class="tab active" onclick="switchTab('orders')">📦 Orders</button>
       <button class="tab" onclick="switchTab('customers')">👥 Customers</button>
       <button class="tab" onclick="switchTab('accounts')">🔑 Account Holders</button>
+      <button class="tab" onclick="switchTab('discounts')">🏷️ Discount Codes</button>
     </div>
 
     <!-- ORDERS PANEL -->
@@ -395,7 +455,7 @@ function showAdmin(){
 
 /* ══ LOAD ALL DATA ══ */
 async function loadAll(){
-  await Promise.all([loadOrders(), loadCustomerOrders(), loadAccounts()]);
+  await Promise.all([loadOrders(), loadCustomerOrders(), loadAccounts(), loadDiscounts()]);
   updateStats();
 }
 
@@ -836,6 +896,96 @@ function switchTab(name){
   document.getElementById(`panel-${name}`).classList.add("active");
 }
 
+
+
+/* ══ DISCOUNT CODES ══ */
+let allDiscounts = [];
+
+async function loadDiscounts(){
+  document.getElementById("discountsBody").innerHTML = `<tr><td colspan="8" class="loading">Loading…</td></tr>`;
+  try{
+    const snap = await db.collection("discountCodes").orderBy("createdAt","desc").get();
+    allDiscounts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderDiscounts();
+  }catch(e){
+    document.getElementById("discountsBody").innerHTML = `<tr><td colspan="8" class="empty-state">Error loading codes.</td></tr>`;
+  }
+}
+
+function renderDiscounts(){
+  const tbody = document.getElementById("discountsBody");
+  if(!allDiscounts.length){ tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No discount codes yet.</td></tr>`; return; }
+  tbody.innerHTML = allDiscounts.map(d => `
+    <tr>
+      <td style="font-weight:980;font-family:monospace;letter-spacing:.1em;">${esc(d.code)}</td>
+      <td style="font-weight:900;color:#4ade80;">${d.pct}%</td>
+      <td style="font-size:12px;color:var(--muted);">${d.expiresAt||"—"}</td>
+      <td style="font-size:12px;">${d.useLimit||"∞"}</td>
+      <td style="font-size:12px;">${d.usedCount||0}</td>
+      <td style="font-size:12px;">${d.singleUse?"Yes":"No"}</td>
+      <td>
+        <select class="inline-select" onchange="toggleDiscountActive('${d.id}', this.value==='true')">
+          <option value="true" ${d.active?"selected":""}>Active</option>
+          <option value="false" ${!d.active?"selected":""}>Inactive</option>
+        </select>
+      </td>
+      <td>
+        <button class="btn danger" onclick="deleteDiscount('${d.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function createDiscount(){
+  const code = document.getElementById("newCode").value.trim().toUpperCase();
+  const pct = Number(document.getElementById("newPct").value);
+  const expiry = document.getElementById("newExpiry").value;
+  const limit = document.getElementById("newLimit").value;
+  const singleUse = document.getElementById("newSingleUse").checked;
+  const msg = document.getElementById("discountCreateMsg");
+
+  if(!code){ msg.style.color="#ff6b6b"; msg.textContent="Please enter a code."; return; }
+  if(!pct||pct<1||pct>100){ msg.style.color="#ff6b6b"; msg.textContent="Please enter a valid percentage (1-100)."; return; }
+
+  try{
+    // Check if code already exists
+    const existing = await db.collection("discountCodes").where("code","==",code).get();
+    if(!existing.empty){ msg.style.color="#ff6b6b"; msg.textContent="Code already exists."; return; }
+
+    await db.collection("discountCodes").add({
+      code, pct,
+      expiresAt: expiry||null,
+      useLimit: limit?Number(limit):null,
+      usedCount: 0,
+      singleUse,
+      usedBy: [],
+      active: true,
+      createdAt: new Date().toISOString()
+    });
+
+    msg.style.color="#4ade80"; msg.textContent=`✅ Code "${code}" created!`;
+    document.getElementById("newCode").value="";
+    document.getElementById("newPct").value="";
+    document.getElementById("newExpiry").value="";
+    document.getElementById("newLimit").value="";
+    document.getElementById("newSingleUse").checked=false;
+    await loadDiscounts();
+    setTimeout(()=>msg.textContent="",3000);
+  }catch(e){ msg.style.color="#ff6b6b"; msg.textContent="Error creating code."; }
+}
+
+async function toggleDiscountActive(id, active){
+  try{ await db.collection("discountCodes").doc(id).update({active}); }catch(e){ alert("Update failed."); }
+}
+
+async function deleteDiscount(id){
+  if(!confirm("Delete this code? This cannot be undone.")) return;
+  try{
+    await db.collection("discountCodes").doc(id).delete();
+    allDiscounts = allDiscounts.filter(d => d.id !== id);
+    renderDiscounts();
+  }catch(e){ alert("Delete failed."); }
+}
 
 function togglePw(id, btn){
   const input = document.getElementById(id);
