@@ -163,6 +163,16 @@
     .history-item .h-total{font-weight:980;font-size:14px;}
     .history-item .h-lines{font-size:12px;color:rgba(242,242,242,.75);line-height:1.5;}
     .history-item .h-method{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(208,21,31,.45);background:rgba(208,21,31,.08);color:rgba(242,242,242,.85);display:inline-block;margin-top:6px;}
+    
+    .discount-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
+    .discount-input{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:12px;color:var(--ink);padding:10px 14px;font-size:13px;outline:none;text-transform:uppercase;letter-spacing:.08em;}
+    .discount-input:focus{border-color:rgba(208,21,31,.85);box-shadow:0 0 0 3px rgba(208,21,31,.12);}
+    .discount-input::placeholder{color:rgba(242,242,242,.35);text-transform:none;letter-spacing:0;}
+    .discount-applied{margin-top:6px;font-size:12px;color:#4ade80;font-weight:850;}
+    .discount-line{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:10px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);font-size:12px;font-weight:900;margin-top:6px;color:#4ade80;}
+    .discount-line .remove-disc{background:none;border:none;color:rgba(74,222,128,.6);cursor:pointer;font-size:14px;padding:0 4px;}
+    .discount-line .remove-disc:hover{color:#ff6b6b;}
+
     .cart-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;font-size:11px;font-weight:900;line-height:1;min-width:18px;height:18px;border-radius:999px;padding:0 5px;margin-left:2px;}
     .cart-badge.hidden{display:none;}
     /* ── LANDING PAGE ── */
@@ -423,6 +433,14 @@
           ⚠️ <strong style="color:#fff;">Important:</strong> When sending payment through your selected app, do <strong style="color:#fff;">not</strong> include product names in the payment note or memo field.
         </div>
         <div class="divider"></div>
+        <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Discount Code</b>
+        <div class="discount-row">
+          <input class="discount-input" id="discountInput" placeholder="Enter code (optional)" maxlength="20" />
+          <button class="btn" id="applyDiscountBtn" style="white-space:nowrap;">Apply</button>
+        </div>
+        <div id="discountMsg" style="font-size:12px;min-height:16px;margin-top:4px;"></div>
+        <div id="discountLines"></div>
+        <div class="divider"></div>
         <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Submit Order</b>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
           <div class="f-group" style="margin-bottom:0;"><label style="font-size:12px;color:var(--muted);font-weight:850;">Your Name</label><input class="f-input" id="orderName" placeholder="Full name" style="font-size:13px;padding:10px 14px;" /></div>
@@ -680,7 +698,7 @@ const ITEMS=[
   {id:"kitfull",name:"Water + syr + wipes + recon",cat:"kits",variants:[{strength:"kit",price:35}]},
 ];
 
-const state={cat:"all",q:"",sort:"featured",sectionView:false,detail:null,cart:new Map(),fulfillment:"pickup",paymentMethod:""};
+const state={cat:"all",q:"",sort:"featured",sectionView:false,detail:null,cart:new Map(),fulfillment:"pickup",paymentMethod:"",appliedCodes:[],firstOrderDiscount:false};
 const money=(n)=>`$${Number(n).toFixed(2)}`;
 const esc=(s)=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>el.style.display="none",1400);}
@@ -902,13 +920,16 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   statusEl.className="order-status";statusEl.textContent="";
 
   try{
+    const discountSummary=t.discounts.length?t.discounts.map(d=>`${d.label}: -${money(d.amount)}`).join("\n"):"";
     await sendOrderEmails({
       customerName:name, customerEmail:email, customerPhone:phone,
       fulfillment:method, cartLines, cartTotal:money(t.total),
       itemCount:`${t.count} item(s)`, notes:notes||"None",
       orderDate:new Date().toLocaleString(),
       paymentMethod:state.paymentMethod,
-      shipping:t.shipping
+      shipping:t.shipping,
+      discountSummary,
+      discountTotal:t.totalDiscount>0?money(t.totalDiscount):""
     });
   }catch(err){
     console.error("Email error:",err);
@@ -917,8 +938,21 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   }
 
   const user=getSession();
-  const orderRecord={date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray(),customerName:name,customerEmail:email,customerPhone:phone,fulfillment:method,cartLines,paymentMethod:state.paymentMethod,status:"Pending",trackingNumber:"",submittedAt:new Date().toISOString()};
+  const orderRecord={date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray(),customerName:name,customerEmail:email,customerPhone:phone,fulfillment:method,cartLines,paymentMethod:state.paymentMethod,status:"Pending",trackingNumber:"",submittedAt:new Date().toISOString(),discounts:t.discounts.map(d=>d.label),discountTotal:t.totalDiscount};
   if(user) await Auth.addOrder(user.email,orderRecord);
+  // Mark discount codes as used
+  for(const c of state.appliedCodes){
+    try{
+      const ref=db.collection("discountCodes").doc(c.docId);
+      const snap=await ref.get();
+      const data=snap.data();
+      const updates={usedCount:(data.usedCount||0)+1};
+      if(data.singleUse && user) updates.usedBy=[...(data.usedBy||[]),user.email];
+      await ref.update(updates);
+    }catch(e){}
+  }
+  state.appliedCodes=[];
+  state.firstOrderDiscount=false;
 
   statusEl.className="order-status success";statusEl.textContent="✅ Order received! You will receive a confirmation email shortly with payment instructions and pickup or delivery details.";
   state.cart.clear();await persistCart();renderCart();toast("Order submitted!");
@@ -989,12 +1023,68 @@ function addToCart(item,variant){const key=cartKey(item,variant),cur=state.cart.
 function decCart(key){const cur=state.cart.get(key);if(!cur)return;cur.qty-=1;if(cur.qty<=0)state.cart.delete(key);persistCart();renderCart();}
 function incCart(key){const cur=state.cart.get(key);if(!cur)return;cur.qty+=1;persistCart();renderCart();}
 function clearCart(){state.cart.clear();persistCart();renderCart();}
+/* ══ INJECTABLE CATEGORIES ══ */
+const INJECTABLE_CATS = ["all","regulators","detox"];
+function isInjectable(cat){ return INJECTABLE_CATS.includes(cat); }
+
+/* ══ DISCOUNT ENGINE ══ */
+function computeDiscounts(){
+  const items=[...state.cart.values()];
+  const discounts=[];
+
+  // 1. First order discount 10%
+  if(state.firstOrderDiscount){
+    const subtotal=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
+    discounts.push({label:"First Order 10% Off",amount:subtotal*0.10,type:"firstorder"});
+  }
+
+  // 2. Code-based discounts
+  for(const code of state.appliedCodes){
+    const subtotal=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
+    discounts.push({label:`Code "${code.code}" ${code.pct}% Off`,amount:subtotal*(code.pct/100),type:"code",code:code.code});
+  }
+
+  // 3. Vial bulk discounts — only injectable cats
+  const injectableItems=items.filter(it=>isInjectable(it.cat));
+
+  // 5 mix vials 5% (5+ different injectable products)
+  const uniqueInjectables=new Set(injectableItems.map(it=>it.itemId||it.name));
+  if(uniqueInjectables.size>=5){
+    // Apply 5% to cheapest 5 injectable items by unit
+    const units=[];
+    for(const it of injectableItems){ for(let i=0;i<it.qty;i++) units.push({price:it.unitPrice,name:it.name}); }
+    units.sort((a,b)=>a.price-b.price);
+    const eligible=units.slice(0,5);
+    const base=eligible.reduce((a,x)=>a+x.price,0);
+    if(base>0) discounts.push({label:"5 Mix Vials 5% Off",amount:base*0.05,type:"mix5"});
+  }
+
+  // Per-product same-vial discounts
+  for(const it of injectableItems){
+    if(!isInjectable(it.cat)) continue;
+    const qty=it.qty;
+    if(qty>=10){
+      // 10 same vial 20% on 10
+      const eligible=it.unitPrice*10;
+      discounts.push({label:`${it.name} x10 Bulk 20% Off`,amount:eligible*0.20,type:"bulk10",id:it.name});
+    } else if(qty>=5){
+      // 5 same vial 10% on 5
+      const eligible=it.unitPrice*5;
+      discounts.push({label:`${it.name} x5 Bulk 10% Off`,amount:eligible*0.10,type:"bulk5",id:it.name});
+    }
+  }
+
+  return discounts;
+}
+
 function computeTotals(){
   const items=[...state.cart.values()];
   const subtotal=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
   const shipping=state.fulfillment==="ship"?15:0;
-  const total=subtotal+shipping;
-  return{subtotal,shipping,total,count:items.reduce((a,x)=>a+x.qty,0),lines:items.length};
+  const discounts=computeDiscounts();
+  const totalDiscount=discounts.reduce((a,d)=>a+d.amount,0);
+  const total=Math.max(0,subtotal-totalDiscount)+shipping;
+  return{subtotal,shipping,totalDiscount,discounts,total,count:items.reduce((a,x)=>a+x.qty,0),lines:items.length};
 }
 
 function renderCart(){
@@ -1009,15 +1099,81 @@ function renderCart(){
   document.getElementById("subMeta").textContent=`${t.count} item${t.count===1?"":"s"}`;
   // Shipping line
   const shippingRow=document.getElementById("shippingRow");
-  if(shippingRow){
-    shippingRow.style.display=t.shipping>0?"block":"none";
-  }
-  // Update total sub text
+  if(shippingRow) shippingRow.style.display=t.shipping>0?"block":"none";
+  // Total sub text
   const totalSubEl=document.getElementById("totalSub");
-  if(totalSubEl) totalSubEl.textContent=t.shipping>0?"Includes $15 shipping":"—";
+  if(totalSubEl){
+    let subs=[];
+    if(t.shipping>0) subs.push("Incl. $15 shipping");
+    if(t.totalDiscount>0) subs.push(`-${money(t.totalDiscount)} discounts`);
+    totalSubEl.textContent=subs.join(" · ")||"—";
+  }
+  // Discount lines
+  const dlEl=document.getElementById("discountLines");
+  if(dlEl){
+    if(t.discounts.length){
+      dlEl.innerHTML=t.discounts.map(d=>`
+        <div class="discount-line">
+          <span>🏷️ ${esc(d.label)}</span>
+          <span>-${money(d.amount)}</span>
+        </div>`).join("");
+    } else { dlEl.innerHTML=""; }
+  }
   const badge=document.getElementById("cartBadge");
   if(t.count>0){badge.textContent=t.count;badge.classList.remove("hidden");}else{badge.classList.add("hidden");}
 }
+
+
+/* ══ DISCOUNT CODES ══ */
+async function checkFirstOrder(){
+  const user=getSession();
+  if(!user) return;
+  try{
+    const orders=await Auth.getOrders(user.email);
+    if(orders.length===0){
+      state.firstOrderDiscount=true;
+      renderCart();
+    }
+  }catch(e){}
+}
+
+async function applyDiscountCode(){
+  const input=document.getElementById("discountInput");
+  const msg=document.getElementById("discountMsg");
+  const code=input.value.trim().toUpperCase();
+  if(!code){ msg.style.color="#ff6b6b"; msg.textContent="Please enter a code."; return; }
+  if(state.appliedCodes.find(c=>c.code===code)){ msg.style.color="#ff6b6b"; msg.textContent="Code already applied."; return; }
+
+  try{
+    const snap=await db.collection("discountCodes").where("code","==",code).get();
+    if(snap.empty){ msg.style.color="#ff6b6b"; msg.textContent="Invalid code."; return; }
+    const doc=snap.docs[0];
+    const data=doc.data();
+
+    // Check active
+    if(!data.active){ msg.style.color="#ff6b6b"; msg.textContent="This code is no longer active."; return; }
+
+    // Check expiry
+    if(data.expiresAt && new Date(data.expiresAt) < new Date()){ msg.style.color="#ff6b6b"; msg.textContent="This code has expired."; return; }
+
+    // Check use limit
+    if(data.useLimit && data.usedCount>=data.useLimit){ msg.style.color="#ff6b6b"; msg.textContent="This code has reached its use limit."; return; }
+
+    // Check single use per customer
+    if(data.singleUse){
+      const user=getSession();
+      if(user && data.usedBy && data.usedBy.includes(user.email)){ msg.style.color="#ff6b6b"; msg.textContent="You have already used this code."; return; }
+    }
+
+    state.appliedCodes.push({code, pct:data.pct, docId:doc.id});
+    msg.style.color="#4ade80"; msg.textContent=`✅ Code applied: ${data.pct}% off!`;
+    input.value="";
+    renderCart();
+  }catch(e){ msg.style.color="#ff6b6b"; msg.textContent="Error checking code. Try again."; }
+}
+
+document.getElementById("applyDiscountBtn").addEventListener("click", applyDiscountCode);
+document.getElementById("discountInput").addEventListener("keydown",(e)=>{ if(e.key==="Enter") applyDiscountCode(); });
 
 /* ══ DRAWER ══ */
 function openDrawer(id){document.getElementById(id).classList.add("open");document.body.style.overflow="hidden";}
@@ -1028,7 +1184,7 @@ window.addEventListener("keydown",(e)=>{if(e.key==="/"){e.preventDefault();docum
 document.getElementById("search").addEventListener("input",(e)=>{state.q=e.target.value;render();});
 document.getElementById("sortSel").addEventListener("change",(e)=>{state.sort=e.target.value;render();});
 document.getElementById("toggleSections").addEventListener("click",()=>{state.sectionView=!state.sectionView;syncUI();render(true);});
-document.getElementById("openCart").onclick=()=>{openDrawer("cartBackdrop");renderCart();};
+document.getElementById("openCart").onclick=()=>{openDrawer("cartBackdrop");renderCart();checkFirstOrder();};
 document.getElementById("clearCart").onclick=()=>{clearCart();toast("Cart cleared");};
 
 
