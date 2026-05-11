@@ -1012,7 +1012,7 @@ function openDetail(item,variant){
   item.variants.forEach(v=>{const b=document.createElement("button");b.className="strength";b.textContent=v.strength;b.dataset.active=String(v.strength===variant.strength);b.onclick=()=>{dStrengths.querySelectorAll(".strength").forEach(x=>x.dataset.active="false");b.dataset.active="true";updateDetailVariant(v);};dStrengths.appendChild(b);});
   openDrawer("detailBackdrop");
 }
-function updateDetailVariant(variant){state.detail.variant=variant;document.getElementById("dPrice").textContent=money(variant.price);document.getElementById("dStrength").textContent=`Selected: ${variant.strength}`;}
+function updateDetailVariant(variant){state.detail.variant=variant;document.getElementById("dPrice").textContent=money(variant.price);document.getElementById("dStrength").textContent=`Selected: ${variant.strength}`;const item=state.detail.item;document.getElementById("dNote").innerHTML=`<b style="color:#fff">Line item:</b><br>${esc(item.name)} — ${esc(variant.strength)} — ${money(variant.price)}<br><br><span style="color:rgba(242,242,242,.78)">Add to cart to see totals.</span>`;}
 
 document.getElementById("addToCart").onclick=()=>{if(!state.detail)return;addToCart(state.detail.item,state.detail.variant);toast("Added to cart");};
 document.getElementById("copyLine").onclick=async()=>{if(!state.detail)return;const line=`${state.detail.item.name} — ${state.detail.variant.strength} — ${money(state.detail.variant.price)}`;try{await navigator.clipboard.writeText(line);toast("Copied");}catch(e){toast("Copy failed");}};
