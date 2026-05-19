@@ -317,6 +317,10 @@
       <div class="f-group"><label>Full Name</label><input class="f-input" type="text" id="signupName" placeholder="Your name" /></div>
       <div class="f-group"><label>Email</label><input class="f-input" type="email" id="signupEmail" placeholder="you@example.com" /></div>
       <div class="f-group"><label>Password (min 6 chars)</label><div class="pw-wrap"><input class="f-input" type="password" id="signupPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('signupPass',this)">👁</button></div></div>
+      <div class="check-group">
+        <input type="checkbox" id="overlayAgeCheck" />
+        <label for="overlayAgeCheck">I confirm that I am <span>21 years of age or older</span> and agree to use this site for research purposes only.</label>
+      </div>
       <button class="btn-full" id="signupBtn">Create Account</button>
       <div class="overlay-err" id="signupErr"></div>
       <div class="overlay-link">Already have one? <a id="toLogin">Sign in</a></div>
