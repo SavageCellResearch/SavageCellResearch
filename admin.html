@@ -154,6 +154,14 @@
 </head>
 <body>
 
+<!-- ROUTE GUARD: block page render until session verified -->
+<script>
+  (function(){
+    // Hide everything immediately until auth is confirmed
+    document.documentElement.style.visibility = 'hidden';
+  })();
+</script>
+
 <!-- LOGIN -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-box">
@@ -994,7 +1002,17 @@ function togglePw(id, btn){
 }
 
 /* ══ INIT ══ */
-if(sessionStorage.getItem("sc_admin")==="1") showAdmin();
+(function(){
+  // Reveal page now that we've checked auth state
+  document.documentElement.style.visibility = '';
+  if(sessionStorage.getItem("sc_admin")==="1"){
+    showAdmin();
+  } else {
+    // Make sure admin content stays hidden and only login is shown
+    document.getElementById("adminWrap").style.display = "none";
+    document.getElementById("loginWrap").style.display = "flex";
+  }
+})();
 </script>
 </body>
 </html>
