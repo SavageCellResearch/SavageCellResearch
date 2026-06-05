@@ -1489,7 +1489,7 @@ async function sendPromoEmail(){
 async function loadPromoHistory(){
   const list = document.getElementById("promoHistoryList");
   try{
-    const snap = await db.collection("promoHistory").orderBy("sentAt","desc").limit(20).get();
+    const snap = await db.collection("promoHistory").orderBy("sentAt","desc").limit(20).get().catch(()=>db.collection("promoHistory").limit(20).get());
     if(snap.empty){ list.innerHTML=`<div style="color:var(--muted);font-size:12px;font-style:italic;">No promos sent yet.</div>`; return; }
     list.innerHTML = snap.docs.map(d => {
       const h = d.data();
@@ -1508,7 +1508,7 @@ async function loadPromoHistory(){
       </div>`;
     }).join("");
   } catch(e){
-    list.innerHTML=`<div style="color:#ff6b6b;font-size:12px;">Error loading history.</div>`;
+    list.innerHTML=`<div style="color:var(--muted);font-size:12px;font-style:italic;">No promos sent yet — or error loading. Check Firestore rules if this persists.</div>`;
   }
 }
 
