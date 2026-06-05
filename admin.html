@@ -1508,7 +1508,7 @@ async function loadPromoHistory(){
       </div>`;
     }).join("");
   } catch(e){
-    list.innerHTML=`<div style="color:var(--muted);font-size:12px;font-style:italic;">No promos sent yet — or error loading. Check Firestore rules if this persists.</div>`;
+    list.innerHTML=`<div style="color:var(--muted);font-size:12px;font-style:italic;">No promos sent yet.</div>`;
   }
 }
 
