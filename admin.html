@@ -749,25 +749,27 @@ function updateStats(){
     const tally = {};
     let total = 0;
     orders.forEach(o => {
-      // cartLines is an array of {name, strength, qty} objects if present
-      if(Array.isArray(o.cartLines)){
-        o.cartLines.forEach(item => {
-          const key = `${item.name} — ${item.strength||""}`.trim().replace(/ — $/,"");
-          tally[key] = (tally[key]||0) + (Number(item.qty)||1);
-          total += (Number(item.qty)||1);
-        });
-      } else if(typeof o.lines === "string" && o.lines){
-        // fallback: parse text lines like "BPC-157 (10mg) x3 = $75.00"
-        o.lines.split("\n").forEach(line => {
-          const m = line.match(/^(.+?)(?:\s*\((.+?)\))?\s*x(\d+)/);
-          if(m){
-            const key = m[2] ? `${m[1].trim()} — ${m[2].trim()}` : m[1].trim();
-            const qty = Number(m[3])||1;
-            tally[key] = (tally[key]||0) + qty;
-            total += qty;
-          }
-        });
-      }
+      // cartLines is stored as a string: "BPC-157 (10mg) x3 = $75.00\nSS-31 (50mg) x1 = $125.00"
+      const raw = typeof o.cartLines === "string" ? o.cartLines : (typeof o.lines === "string" ? o.lines : "");
+      if(!raw) return;
+      raw.split("\n").forEach(line => {
+        line = line.trim();
+        if(!line) return;
+        // Match: "Product Name (strength) xQty" or "Product Name xQty"
+        const mFull = line.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)/);
+        const mSimple = line.match(/^(.+?)\s*x(\d+)/);
+        if(mFull){
+          const key = `${mFull[1].trim()} — ${mFull[2].trim()}`;
+          const qty = Number(mFull[3])||1;
+          tally[key] = (tally[key]||0) + qty;
+          total += qty;
+        } else if(mSimple){
+          const key = mSimple[1].trim();
+          const qty = Number(mSimple[2])||1;
+          tally[key] = (tally[key]||0) + qty;
+          total += qty;
+        }
+      });
     });
     return {tally, total};
   }
@@ -939,20 +941,20 @@ function openStatModal(type){
       const d=new Date(o.submittedAt||o.date);
       return d.getMonth()===thisMonth&&d.getFullYear()===thisYear;
     }).forEach(o => {
-      if(Array.isArray(o.cartLines)){
-        o.cartLines.forEach(item => {
-          const key = `${item.name} — ${item.strength||""}`.trim().replace(/ — $/,"");
-          thisMonthTally[key] = (thisMonthTally[key]||0) + (Number(item.qty)||1);
-        });
-      } else if(typeof o.lines === "string" && o.lines){
-        o.lines.split("\n").forEach(line => {
-          const m = line.match(/^(.+?)(?:\s*\((.+?)\))?\s*x(\d+)/);
-          if(m){
-            const key = m[2] ? `${m[1].trim()} — ${m[2].trim()}` : m[1].trim();
-            thisMonthTally[key] = (thisMonthTally[key]||0) + (Number(m[3])||1);
-          }
-        });
-      }
+      const raw = typeof o.cartLines === "string" ? o.cartLines : (typeof o.lines === "string" ? o.lines : "");
+      if(!raw) return;
+      raw.split("\n").forEach(line => {
+        line = line.trim(); if(!line) return;
+        const mFull = line.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)/);
+        const mSimple = line.match(/^(.+?)\s*x(\d+)/);
+        if(mFull){
+          const key = `${mFull[1].trim()} — ${mFull[2].trim()}`;
+          thisMonthTally[key] = (thisMonthTally[key]||0) + (Number(mFull[3])||1);
+        } else if(mSimple){
+          const key = mSimple[1].trim();
+          thisMonthTally[key] = (thisMonthTally[key]||0) + (Number(mSimple[2])||1);
+        }
+      });
     });
     body.innerHTML = `
       <div class="modal-section">
