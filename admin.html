@@ -1,286 +1,1537 @@
-const RESEND_API_KEY = "re_6xVK2H5d_Lkw6dgQBnuvUDkgaTUNL8Twi";
-const FROM_EMAIL = "orders@savagecellresearch.com";
-const FROM_NAME = "SavageCell Research";
-const ADMIN_EMAIL = "orderssavagecell@gmail.com";
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SavageCell Research • Admin</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root{
+      --bg:#050506;--panel:#0b0c0f;--ink:#f2f2f2;--muted:#a9a9b5;--muted2:#7d7d89;
+      --red:#d0151f;--ember:#ff4d4d;--border:#1c1d24;
+      --green:#4ade80;--yellow:#fbbf24;--blue:#60a5fa;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+    body::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(900px 700px at 85% 10%,rgba(208,21,31,.12),transparent 62%),linear-gradient(180deg,#050506,#07080a);pointer-events:none;}
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+    /* LOGIN */
+    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .login-box{width:min(420px,100%);border:1px solid rgba(208,21,31,.5);border-radius:24px;background:radial-gradient(600px 400px at 80% 10%,rgba(208,21,31,.18),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));box-shadow:0 36px 95px rgba(0,0,0,.8);padding:36px 28px;text-align:center;}
+    .login-logo{width:100px;height:100px;object-fit:contain;margin:0 auto 16px;border-radius:16px;}
+    .login-title{margin:0 0 4px;font-size:24px;font-weight:980;}
+    .login-sub{color:var(--muted);font-size:13px;margin-bottom:28px;}
+    .f-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;text-align:left;}
+    .f-group label{font-size:12px;color:var(--muted);font-weight:850;letter-spacing:.08em;text-transform:uppercase;}
+    .f-input{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:12px;color:var(--ink);padding:12px 14px;font-size:14px;outline:none;width:100%;}
+    .f-input:focus{border-color:rgba(208,21,31,.85);box-shadow:0 0 0 3px rgba(208,21,31,.12);}
+    .f-input::placeholder{color:rgba(242,242,242,.35);}
+    .pw-wrap{position:relative;display:flex;align-items:center;}
+    .pw-wrap .f-input{padding-right:44px;width:100%;}
+    .pw-eye{position:absolute;right:14px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:4px;line-height:1;transition:color .15s;}
+    .pw-eye:hover{color:var(--ink);}
+
+    .btn-login{width:100%;padding:13px;border-radius:12px;border:none;cursor:pointer;font-weight:950;font-size:14px;background:linear-gradient(180deg,rgba(208,21,31,.9),rgba(167,14,22,.9));color:#fff;margin-top:4px;transition:opacity .15s;}
+    .btn-login:hover{opacity:.88;}
+    .btn-login:disabled{opacity:.45;cursor:not-allowed;}
+    .login-err{color:#ff6b6b;font-size:13px;margin-top:10px;min-height:18px;}
+
+    /* ADMIN LAYOUT */
+    .admin-wrap{display:none;}
+    .admin-wrap.visible{display:block;}
+    .topbar{background:#000;border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+    .topbar-left{display:flex;align-items:center;gap:14px;}
+    .topbar-logo{width:44px;height:44px;object-fit:contain;border-radius:10px;}
+    .topbar-title{font-size:16px;font-weight:980;letter-spacing:.2px;}
+    .topbar-sub{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:2px;}
+    .btn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:var(--ink);padding:9px 14px;border-radius:999px;cursor:pointer;font-weight:850;font-size:12px;transition:background .15s,border-color .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+    .btn:hover{border-color:rgba(208,21,31,.7);background:rgba(208,21,31,.1);}
+    .btn.danger{border-color:rgba(208,21,31,.6);background:rgba(208,21,31,.08);color:#ff6b6b;}
+    .btn.danger:hover{background:rgba(208,21,31,.18);}
+    .btn.success{border-color:rgba(74,222,128,.5);background:rgba(74,222,128,.08);color:#4ade80;}
+
+    .admin-body{max-width:1400px;margin:0 auto;padding:24px 20px 60px;}
+
+    /* STATS */
+    .stats-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin-bottom:28px;}
+    @media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    .stat-card.purple::before{background:#a855f7;}
+    @media(max-width:480px){.stats-grid{grid-template-columns:1fr;}}
+    .stat-card{border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));border-radius:18px;padding:18px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .15s,transform .1s;}
+    .stat-card:hover{border-color:rgba(208,21,31,.5);transform:translateY(-2px);}
+    .stat-card::before{content:"";position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;opacity:.15;transform:translate(20px,-20px);}
+    .stat-card.red::before{background:var(--red);}
+    .stat-card.green::before{background:var(--green);}
+    .stat-card.blue::before{background:var(--blue);}
+    .stat-card.yellow::before{background:var(--yellow);}
+    .stat-label{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-weight:850;margin-bottom:8px;}
+    .stat-val{font-size:28px;font-weight:980;letter-spacing:.2px;}
+    .stat-sub{font-size:12px;color:var(--muted2);margin-top:4px;}
+    .stat-month{font-size:11px;margin-top:8px;padding:4px 8px;border-radius:999px;display:inline-block;font-weight:900;}
+    .stat-month.up{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:#4ade80;}
+    .stat-month.neutral{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--muted);}
+    .stat-hint{font-size:10px;color:var(--muted2);margin-top:6px;letter-spacing:.05em;}
+
+    /* MODAL */
+    .modal-backdrop{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;}
+    .modal-backdrop.open{display:flex;}
+    .modal{width:min(680px,100%);max-height:85vh;overflow-y:auto;scrollbar-width:none;}
+    .modal::-webkit-scrollbar{display:none;}
+    .modal{border:1px solid rgba(208,21,31,.45);border-radius:22px;background:radial-gradient(700px 400px at 80% 10%,rgba(208,21,31,.12),transparent 60%),linear-gradient(180deg,#0f0f14,#0a0a0d);box-shadow:0 36px 95px rgba(0,0,0,.8);animation:modalIn .18s ease;}
+    @keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.08);}
+    .modal-head h3{margin:0;font-size:18px;font-weight:980;}
+    .modal-close{width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:var(--ink);cursor:pointer;font-size:16px;font-weight:900;}
+    .modal-close:hover{border-color:rgba(208,21,31,.7);background:rgba(208,21,31,.1);}
+    .modal-body{padding:20px 22px;}
+    .modal-section{margin-bottom:20px;}
+    .modal-section-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:900;margin-bottom:10px;}
+    .modal-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:6px;font-size:13px;}
+    .modal-row .label{color:var(--muted);font-weight:850;}
+    .modal-row .val{font-weight:980;}
+    .bar-wrap{display:flex;flex-direction:column;gap:8px;}
+    .bar-row{display:flex;align-items:center;gap:10px;font-size:12px;}
+    .bar-row .bar-label{width:80px;color:var(--muted);font-weight:850;text-align:right;flex-shrink:0;}
+    .bar-track{flex:1;background:rgba(255,255,255,.06);border-radius:999px;height:10px;overflow:hidden;}
+    .bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#a70e16,#d0151f);}
+    .bar-row .bar-val{width:55px;font-weight:900;color:var(--ink);flex-shrink:0;}
+
+    /* TABS */
+    .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:0;}
+    .tab{padding:10px 18px;cursor:pointer;font-size:13px;font-weight:850;color:var(--muted);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;}
+    .tab.active{color:var(--ink);border-bottom-color:var(--red);}
+    .tab:hover{color:var(--ink);}
+
+    /* PANELS */
+    .panel{display:none;}
+    .panel.active{display:block;}
+
+    /* TABLE */
+    .table-wrap{border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+    thead{background:rgba(0,0,0,.35);}
+    thead th{padding:10px 10px;text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:900;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap;overflow:hidden;}
+    tbody tr{border-bottom:1px solid rgba(255,255,255,.05);transition:background .12s,box-shadow .12s;}
+    tbody tr:hover{background:rgba(208,21,31,.06);box-shadow:inset 3px 0 0 var(--red);}
+    tbody tr:last-child{border-bottom:none;}
+    td{padding:10px 10px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:help;}
+    /* Column widths */
+    col.col-date{width:80px;}
+    col.col-customer{width:110px;}
+    col.col-email{width:130px;}
+    col.col-items{width:100px;}
+    col.col-total{width:70px;}
+    col.col-payment{width:80px;}
+    col.col-fulfill{width:100px;}
+    col.col-status{width:130px;}
+    col.col-tracking{width:110px;}
+    col.col-carrier{width:90px;}
+    col.col-actions{width:200px;}
+
+    /* BADGES */
+    .badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.06em;}
+    .badge.pending{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);color:#fbbf24;}
+    .badge.confirmed{background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.4);color:#60a5fa;}
+    .badge.shipped{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.4);color:#4ade80;}
+
+    /* INLINE EDIT */
+    .inline-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--ink);padding:6px 10px;font-size:12px;outline:none;width:140px;}
+    .inline-input:focus{border-color:rgba(208,21,31,.7);}
+    .inline-select{background:#0b0c0f;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--ink);padding:6px 10px;font-size:12px;outline:none;}
+    .inline-select:focus{border-color:rgba(208,21,31,.7);}
+
+    /* SEARCH */
+    .search-bar{margin-bottom:16px;}
+    .search-bar input{width:100%;max-width:380px;padding:10px 14px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.03);color:var(--ink);font-size:13px;outline:none;}
+    .search-bar input:focus{border-color:rgba(208,21,31,.7);}
+    .search-bar input::placeholder{color:rgba(242,242,242,.35);}
+
+    .empty-state{padding:40px;text-align:center;color:var(--muted);font-size:14px;}
+    .loading{padding:40px;text-align:center;color:var(--muted);}
+
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+    .section-title{font-size:18px;font-weight:980;}
+  </style>
+</head>
+<body>
+
+<!-- ROUTE GUARD: block page render until session verified -->
+<script>
+  (function(){
+    // Hide everything immediately until auth is confirmed
+    document.documentElement.style.visibility = 'hidden';
+  })();
+</script>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <img src="header.jpg" alt="SavageCell" class="login-logo" />
+    <h1 class="login-title">Admin Dashboard</h1>
+    <p class="login-sub">SavageCell Research — Restricted Access</p>
+    <div class="f-group"><label>Admin Email</label><input class="f-input" type="email" id="adminEmail" placeholder="admin@example.com" /></div>
+    <div class="f-group"><label>Password</label><div class="pw-wrap"><input class="f-input" type="password" id="adminPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('adminPass',this)">👁</button></div></div>
+    <button class="btn-login" id="adminLoginBtn">Sign In to Admin</button>
+    <div class="login-err" id="adminErr"></div>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div class="admin-wrap" id="adminWrap">
+  <div class="topbar">
+    <div class="topbar-left">
+      <img src="header.jpg" alt="SavageCell" class="topbar-logo" />
+      <div>
+        <div class="topbar-title">SavageCell Admin</div>
+        <div class="topbar-sub">Dashboard</div>
+      </div>
+    </div>
+    <button class="btn danger" id="adminLogoutBtn">🚪 Sign Out</button>
+  </div>
+
+  <div class="admin-body">
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card red" onclick="openStatModal('revenue')">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-val" id="statRevenue">$0.00</div>
+        <div class="stat-sub">All time</div>
+        <div class="stat-month neutral" id="statRevenueMonth">This month: —</div>
+        <div class="stat-hint">Click for breakdown →</div>
+      </div>
+      <div class="stat-card blue" onclick="openStatModal('orders')">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-val" id="statOrders">0</div>
+        <div class="stat-sub">All time</div>
+        <div class="stat-month neutral" id="statOrdersMonth">This month: —</div>
+        <div class="stat-hint">Click for breakdown →</div>
+      </div>
+      <div class="stat-card green" onclick="openStatModal('customers')">
+        <div class="stat-label">Customers</div>
+        <div class="stat-val" id="statCustomers">0</div>
+        <div class="stat-sub">Registered accounts</div>
+        <div class="stat-month neutral" id="statCustomersMonth">This month: —</div>
+        <div class="stat-hint">Click for breakdown →</div>
+      </div>
+      <div class="stat-card yellow" onclick="openStatModal('avg')">
+        <div class="stat-label">Avg Order Value</div>
+        <div class="stat-val" id="statAvg">$0.00</div>
+        <div class="stat-sub">Per order</div>
+        <div class="stat-month neutral" id="statAvgMonth">This month avg: —</div>
+        <div class="stat-hint">Click for breakdown →</div>
+      </div>
+      <div class="stat-card purple" onclick="openStatModal('items')">
+        <div class="stat-label">Items Sold</div>
+        <div class="stat-val" id="statItemsSold">0</div>
+        <div class="stat-sub">Total units</div>
+        <div class="stat-month neutral" id="statItemsMonth">This month: —</div>
+        <div class="stat-hint">Click for breakdown →</div>
+      </div>
+    </div>
+
+    
+    <!-- DISCOUNT CODES PANEL -->
+    <div class="panel" id="panel-discounts">
+      <div class="section-head">
+        <div class="section-title">Discount Codes</div>
+        <button class="btn" onclick="loadDiscounts()">🔄 Refresh</button>
+      </div>
+
+      <!-- Create new code -->
+      <div style="border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;margin-bottom:20px;background:rgba(255,255,255,.02);">
+        <div style="font-size:13px;font-weight:980;margin-bottom:12px;letter-spacing:.05em;">➕ Create New Code</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Code</div>
+            <input class="inline-input" id="newCode" placeholder="e.g. SAVE10" style="width:100%;text-transform:uppercase;" maxlength="20" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">% Off</div>
+            <input class="inline-input" id="newPct" type="number" placeholder="10" min="1" max="100" style="width:100%;" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Expires (optional)</div>
+            <input class="inline-input" id="newExpiry" type="date" style="width:100%;color-scheme:dark;" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Use Limit (optional)</div>
+            <input class="inline-input" id="newLimit" type="number" placeholder="∞" min="1" style="width:100%;" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;">
+              <input type="checkbox" id="newSingleUse" style="accent-color:var(--red);" /> Single use
+            </label>
+            <button class="btn success" onclick="createDiscount()" style="white-space:nowrap;">✅ Create</button>
+          </div>
+        </div>
+        <div id="discountCreateMsg" style="font-size:12px;min-height:16px;margin-top:8px;"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>% Off</th>
+              <th>Expires</th>
+              <th>Use Limit</th>
+              <th>Used</th>
+              <th>Single Use</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="discountsBody">
+            <tr><td colspan="8" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ORDER DETAIL MODAL -->
+    <div class="modal-backdrop" id="orderDetailModal">
+      <div class="modal" style="width:min(600px,100%);">
+        <div class="modal-head">
+          <h3 id="orderDetailTitle">Order Details</h3>
+          <button class="modal-close" onclick="closeOrderDetail()">✕</button>
+        </div>
+        <div class="modal-body" id="orderDetailBody"></div>
+      </div>
+    </div>
+
+    <!-- STATS MODAL -->
+    <div class="modal-backdrop" id="statModal">
+      <div class="modal">
+        <div class="modal-head">
+          <h3 id="modalTitle">Details</h3>
+          <button class="modal-close" onclick="closeStatModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('orders')">📦 Orders</button>
+      <button class="tab" onclick="switchTab('customers')">👥 Customers</button>
+      <button class="tab" onclick="switchTab('accounts')">🔑 Account Holders</button>
+      <button class="tab" onclick="switchTab('discounts')">🏷️ Discount Codes</button>
+      <button class="tab" onclick="switchTab('promotions')">📣 Promotions</button>
+    </div>
+
+    <!-- ORDERS PANEL -->
+    <div class="panel active" id="panel-orders">
+      <div class="section-head">
+        <div class="section-title">All Orders</div>
+        <button class="btn" onclick="loadOrders()">🔄 Refresh</button>
+      </div>
+      <div class="search-bar"><input type="search" id="orderSearch" placeholder="Search by name, email, status…" oninput="filterOrders()" /></div>
+      <div class="table-wrap">
+        <table>
+          <colgroup>
+            <col class="col-date"/><col class="col-customer"/><col class="col-email"/>
+            <col class="col-items"/><col class="col-total"/><col class="col-payment"/><col class="col-fulfill"/>
+            <col class="col-status"/><col class="col-tracking"/><col class="col-carrier"/><col class="col-actions"/>
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Email</th>
+              <th>Items</th>
+              <th>Total</th>
+              <th>Payment</th>
+              <th>Fulfillment</th>
+              <th>Status</th>
+              <th>Tracking #</th>
+              <th>Carrier</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody">
+            <tr><td colspan="10" class="loading">Loading orders…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS PANEL -->
+    <div class="panel" id="panel-customers">
+      <div class="section-head">
+        <div class="section-title">Customer Orders</div>
+        <button class="btn" onclick="loadCustomerOrders()">🔄 Refresh</button>
+      </div>
+      <div class="search-bar"><input type="search" id="customerSearch" placeholder="Search by name or email…" oninput="filterCustomers()" /></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Orders</th>
+              <th>Total Spent</th>
+              <th>Last Order</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="customersBody">
+            <tr><td colspan="6" class="loading">Loading customers…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ACCOUNT HOLDERS PANEL -->
+    <div class="panel" id="panel-accounts">
+      <div class="section-head">
+        <div class="section-title">Account Holders</div>
+        <button class="btn" onclick="loadAccounts()">🔄 Refresh</button>
+      </div>
+      <div class="search-bar"><input type="search" id="accountSearch" placeholder="Search by name or email…" oninput="filterAccounts()" /></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Joined</th>
+              <th>Orders</th>
+              <th>Saved Address</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="accountsBody">
+            <tr><td colspan="6" class="loading">Loading accounts…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PROMOTIONS PANEL -->
+    <div class="panel" id="panel-promotions">
+      <div class="section-head">
+        <div class="section-title">📣 Promotions</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
+
+        <!-- LEFT: Compose -->
+        <div style="border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;background:rgba(255,255,255,.02);">
+          <div style="font-size:13px;font-weight:980;margin-bottom:16px;letter-spacing:.05em;">✏️ Compose Promo Email</div>
+
+          <!-- Audience -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Send To</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <button class="btn" id="promoAudAll" onclick="setPromoAudience('all')" style="flex:1;" data-active="true">👥 All Accounts</button>
+              <button class="btn" id="promoAudOne" onclick="setPromoAudience('one')" style="flex:1;" data-active="false">👤 One Person</button>
+            </div>
+            <div id="promoSingleWrap" style="display:none;">
+              <input class="inline-input" id="promoSingleEmail" placeholder="Email address or search name…" oninput="filterPromoAccounts()" style="width:100%;margin-bottom:4px;" />
+              <div id="promoAccountSuggestions" style="border:1px solid rgba(255,255,255,.1);border-radius:8px;background:#0b0c0f;display:none;max-height:140px;overflow-y:auto;"></div>
+            </div>
+          </div>
+
+          <!-- Subject -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Email Subject</div>
+            <input class="inline-input" id="promoSubject" placeholder="e.g. Exclusive Deal for You 🔥" style="width:100%;" />
+          </div>
+
+          <!-- Headline -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Headline</div>
+            <input class="inline-input" id="promoHeadline" placeholder="e.g. June Flash Sale — Members Only" style="width:100%;" />
+          </div>
+
+          <!-- Body message -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Message</div>
+            <textarea class="inline-input" id="promoMessage" rows="4" placeholder="Write your promo message here…" style="width:100%;resize:vertical;font-family:inherit;"></textarea>
+          </div>
+
+          <!-- Featured deal (optional) -->
+          <div style="margin-bottom:14px;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">⭐ Featured Deal (optional)</div>
+            <input class="inline-input" id="promoDealProduct" placeholder="Product name (e.g. BPC-157 10mg)" style="width:100%;margin-bottom:6px;" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+              <input class="inline-input" id="promoDealPrice" placeholder="Sale price (e.g. $20.00)" />
+              <input class="inline-input" id="promoDealExpiry" placeholder="Valid until (e.g. June 30)" />
+            </div>
+          </div>
+
+          <!-- Discount code -->
+          <div style="margin-bottom:16px;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">🏷️ Discount Code</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <button class="btn" id="promoCodeExisting" onclick="setPromoCodeMode('existing')" style="flex:1;font-size:11px;" data-active="true">Use Existing</button>
+              <button class="btn" id="promoCodeNew" onclick="setPromoCodeMode('new')" style="flex:1;font-size:11px;" data-active="false">Create New</button>
+            </div>
+            <div id="promoCodeExistingWrap">
+              <select class="inline-select" id="promoExistingCode" style="width:100%;">
+                <option value="">— Select a code —</option>
+              </select>
+            </div>
+            <div id="promoCodeNewWrap" style="display:none;">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                <input class="inline-input" id="promoNewCode" placeholder="Code (e.g. JUNE20)" style="text-transform:uppercase;" maxlength="20" />
+                <input class="inline-input" id="promoNewPct" type="number" placeholder="% Off" min="1" max="100" />
+                <input class="inline-input" id="promoNewExpiry" type="date" style="color-scheme:dark;" />
+              </div>
+              <div id="promoNewCodeMsg" style="font-size:11px;min-height:14px;margin-top:4px;"></div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;">
+            <button class="btn" onclick="previewPromoEmail()" style="flex:1;">👁 Preview</button>
+            <button class="btn success" onclick="sendPromoEmail()" style="flex:1;">📨 Send</button>
+          </div>
+          <div id="promoSendMsg" style="font-size:12px;min-height:16px;margin-top:10px;text-align:center;"></div>
+        </div>
+
+        <!-- RIGHT: Preview + History -->
+        <div style="display:flex;flex-direction:column;gap:16px;">
+
+          <!-- Email Preview -->
+          <div style="border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;background:rgba(255,255,255,.02);">
+            <div style="font-size:13px;font-weight:980;margin-bottom:12px;letter-spacing:.05em;">👁 Email Preview</div>
+            <div id="promoPreviewBox" style="border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:16px;font-size:12px;color:var(--muted);font-style:italic;">
+              Fill out the form and click Preview to see the email.
+            </div>
+          </div>
+
+          <!-- Sent History -->
+          <div style="border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;background:rgba(255,255,255,.02);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="font-size:13px;font-weight:980;letter-spacing:.05em;">📋 Sent History</div>
+              <button class="btn" onclick="loadPromoHistory()" style="font-size:11px;padding:5px 10px;">🔄 Refresh</button>
+            </div>
+            <div id="promoHistoryList" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;scrollbar-width:none;">
+              <div style="color:var(--muted);font-size:12px;font-style:italic;">Loading history…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ══ FIREBASE ══ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDlGMiVVE0fLPS3sWlN9FtQePRTQ4GkeeM",
+  authDomain: "savagecell-research.firebaseapp.com",
+  projectId: "savagecell-research",
+  storageBucket: "savagecell-research.firebasestorage.app",
+  messagingSenderId: "1068551884800",
+  appId: "1:1068551884800:web:bbcc1de9759018858648e5"
 };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
+const WORKER_URL = "https://savagecell-mailer.jasminegalanon.workers.dev";
 
-/* ══ PAYMENT INSTRUCTIONS ══ */
-function getPaymentInstructions(method, total) {
-  const instructions = {
-    "Venmo": `Send <strong>${total}</strong> on Venmo to <strong>@Corey-Rice-15</strong>`,
-    "Cash App": `Send <strong>${total}</strong> on Cash App to <strong>$BigD0G100</strong>`,
-    "PayPal": `Send <strong>${total}</strong> on PayPal to <strong>paypal.me/CoreyRice207</strong>`,
-    "Apple Pay": `Send <strong>${total}</strong> via Apple Pay to <strong>515-802-2184</strong>`,
-    "Bitcoin": `Send <strong>${total}</strong> worth of BTC to the following Bitcoin address:<br><br><code style="font-family:'Courier New',monospace;font-size:12px;word-break:break-all;background:rgba(255,255,255,.06);padding:8px 10px;border-radius:8px;display:block;">3FkuE1shjAaVsPEAL3FQddSgvKV7jt7AHT</code><br><span style="font-size:12px;color:#ff6b6b;">⚠️ Bitcoin network only. Do not send over any other network or funds may be lost.</span>`,
-    "USDC": `Send <strong>${total}</strong> worth of USDC to the following Ethereum address:<br><br><code style="font-family:'Courier New',monospace;font-size:12px;word-break:break-all;background:rgba(255,255,255,.06);padding:8px 10px;border-radius:8px;display:block;">0x83e3b0417065c2Af98fc3754fb64FacE5d0bD752</code><br><span style="font-size:12px;color:#ff6b6b;">⚠️ Ethereum network only. Do not send over any other network or funds may be lost.</span>`,
-    "Cash": `This order is set for <strong>Local Pickup</strong>. Please bring <strong>${total} cash</strong> at the time of pickup. Our team will reach out to arrange the details.`,
-    "Cash": `This order is set for <strong>Local Pickup</strong>. Please bring <strong>${total} cash</strong> at the time of pickup. Our team will reach out to arrange the details.`,
-  };
-  return instructions[method] || `Please send <strong>${total}</strong> via <strong>${method}</strong>. Our team will follow up with further details.`;
-}
-
-/* ══ FULFILLMENT INSTRUCTIONS ══ */
-function getFulfillmentInstructions(fulfillment) {
-  if (!fulfillment || fulfillment.toLowerCase().includes("pickup")) {
-    return `This order is set for <strong style="color:#f2f2f2;">Local Pickup.</strong> A member of our team will <strong style="color:#f2f2f2;">contact you directly</strong> to arrange a pickup time and location.`;
-  } else {
-    return `This order is set for <strong style="color:#f2f2f2;">Shipping.</strong> Your order will be shipped to the address you provided: <strong style="color:#f2f2f2;">${fulfillment.replace("Ship to: ", "")}</strong><br><br>You will receive a tracking number via email once your order ships.`;
-  }
-}
-
-
-export default {
-  async fetch(request, env, ctx) {
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: CORS });
-    }
-
-    if (request.method !== "POST") {
-      return new Response("Method not allowed", { status: 405, headers: CORS });
-    }
-
-    let body;
-    try { body = await request.json(); } catch(e) {
-      return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { ...CORS, "Content-Type": "application/json" } });
-    }
-
-    const { type, data } = body;
-
-    try {
-      if (type === "order") {
-        await sendOrderEmail(data);
-        await sendAutoReply(data);
-      } else if (type === "tracking") {
-        await sendTrackingEmail(data);
-      } else if (type === "receipt") {
-        await sendReceiptEmail(data);
-      } else {
-        return new Response(JSON.stringify({ error: "Unknown type" }), { status: 400, headers: { ...CORS, "Content-Type": "application/json" } });
-      }
-
-      return new Response(JSON.stringify({ ok: true }), { headers: { ...CORS, "Content-Type": "application/json" } });
-    } catch(e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...CORS, "Content-Type": "application/json" } });
-    }
-  }
-};
-
-async function sendEmail(to, subject, html) {
-  const res = await fetch("https://api.resend.com/emails", {
+async function sendWorkerEmail(type, data){
+  const res = await fetch(WORKER_URL, {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: [to],
-      subject,
-      html
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, data })
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Resend error: ${err}`);
+  if(!res.ok) throw new Error("Worker error");
+}
+
+/* ══ ADMIN CREDENTIALS
+   Change these to Corey's desired admin email and password ══ */
+const ADMIN_EMAIL = "savagecellresearch@gmail.com";
+const ADMIN_PASSWORD = "SavageAdmin2025!";
+
+/* ══ DATA STORES ══ */
+let allOrders = [];
+let allCustomers = [];
+let allAccounts = [];
+
+const money = (n) => `$${Number(n).toFixed(2)}`;
+const esc = (s) => String(s||"").replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ══ ADMIN LOGIN ══ */
+document.getElementById("adminLoginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("adminEmail").value.trim();
+  const pass = document.getElementById("adminPass").value;
+  const btn = document.getElementById("adminLoginBtn");
+  const err = document.getElementById("adminErr");
+
+  if(email.toLowerCase() !== ADMIN_EMAIL.toLowerCase() || pass !== ADMIN_PASSWORD){
+    err.textContent = "Invalid admin credentials.";
+    return;
   }
-  return res.json();
+
+  btn.disabled = true; btn.textContent = "Signing in…";
+  sessionStorage.setItem("sc_admin", "1");
+  showAdmin();
+  btn.disabled = false; btn.textContent = "Sign In to Admin";
+});
+
+document.getElementById("adminEmail").addEventListener("keydown", (e) => { if(e.key==="Enter") document.getElementById("adminLoginBtn").click(); });
+document.getElementById("adminPass").addEventListener("keydown", (e) => { if(e.key==="Enter") document.getElementById("adminLoginBtn").click(); });
+
+document.getElementById("adminLogoutBtn").addEventListener("click", () => {
+  sessionStorage.removeItem("sc_admin");
+  document.getElementById("adminWrap").classList.remove("visible");
+  document.getElementById("loginWrap").style.display = "flex";
+});
+
+function showAdmin(){
+  document.getElementById("loginWrap").style.display = "none";
+  document.getElementById("adminWrap").classList.add("visible");
+  loadAll();
 }
 
-/* ══ ORDER NOTIFICATION TO COREY ══ */
-async function sendOrderEmail(d) {
-  const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#0a0a0b;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0b;padding:32px 16px;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-<tr><td align="center" style="background:#000;border-radius:16px 16px 0 0;padding:28px 24px;border:1px solid #2a0a0e;border-bottom:none;">
-<img src="https://savagecellresearch.com/header.jpg" width="220" style="display:block;margin:0 auto;border-radius:10px;"/>
-<p style="margin:14px 0 0;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#a9a9b5;">Members Only Catalog</p>
-</td></tr>
-<tr><td style="background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);height:3px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;"></td></tr>
-<tr><td style="background:#0f0f12;padding:20px 28px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0"><tr>
-<td><p style="margin:0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#a9a9b5;">New Order Received</p>
-<h1 style="margin:6px 0 0;font-size:24px;font-weight:900;color:#f2f2f2;">${d.customerName}</h1></td>
-<td align="right" valign="top"><span style="display:inline-block;background:rgba(208,21,31,0.15);border:1px solid rgba(208,21,31,0.6);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:900;color:#ff6b6b;">NEW ORDER</span></td>
-</tr></table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 20px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;margin-top:20px;">
-<tr style="background:#111116;"><td colspan="2" style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Customer Info</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;width:120px;">Name</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.customerName}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;">Email</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.customerEmail}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;">Phone</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.customerPhone||"—"}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;">Date</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.orderDate}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;">Fulfillment</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.fulfillment}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 20px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;">
-<tr style="background:#111116;"><td style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Order Details</td><td align="right" style="padding:8px 14px;font-size:10px;color:#7d7d89;font-weight:900;">${d.itemCount}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td colspan="2" style="padding:14px;font-size:13px;color:#d4d4d4;line-height:1.9;font-family:'Courier New',monospace;white-space:pre-line;">${d.cartLines}${d.shipping?`
-Shipping: $${Number(d.shipping).toFixed(2)}`:""}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 20px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(208,21,31,0.4);border-radius:12px;background:rgba(208,21,31,0.07);">
-<tr><td style="padding:14px 16px;font-size:13px;color:#a9a9b5;font-weight:700;">Order Total</td><td align="right" style="padding:14px 16px;font-size:22px;font-weight:900;color:#f2f2f2;">${d.cartTotal}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 24px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;">
-<tr style="background:#111116;"><td style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Payment Method</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.paymentMethod||"Not specified"}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 24px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;">
-<tr style="background:#111116;"><td style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Notes</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:12px 14px;font-size:13px;color:#d4d4d4;font-style:italic;">${d.notes||"None"}</td></tr>
-</table></td></tr>
-<tr><td style="background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);height:3px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;"></td></tr>
-<tr><td align="center" style="background:#000;border-radius:0 0 16px 16px;padding:20px 24px;border:1px solid #2a0a0e;border-top:none;">
-<p style="margin:0 0 6px;font-size:12px;font-weight:900;color:#f2f2f2;letter-spacing:0.1em;">SAVAGECELL RESEARCH</p>
-<p style="margin:0;font-size:11px;color:#7d7d89;">This order was submitted via savagecellresearch.com</p>
-</td></tr>
-</table></td></tr></table></body></html>`;
-  await sendEmail(ADMIN_EMAIL, `New Order from ${d.customerName} — SavageCell Research`, html);
+/* ══ LOAD ALL DATA ══ */
+async function loadAll(){
+  await Promise.all([loadOrders(), loadCustomerOrders(), loadAccounts(), loadDiscounts()]);
+  updateStats();
 }
 
-/* ══ AUTO-REPLY TO CUSTOMER ══ */
-async function sendAutoReply(d) {
-  const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#0a0a0b;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0b;padding:32px 16px;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-<tr><td align="center" style="background:#000;border-radius:16px 16px 0 0;padding:28px 24px;border:1px solid #2a0a0e;border-bottom:none;">
-<img src="https://savagecellresearch.com/header.jpg" width="220" style="display:block;margin:0 auto;border-radius:10px;"/>
-<p style="margin:14px 0 0;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#a9a9b5;">Members Only Catalog</p>
-</td></tr>
-<tr><td style="background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);height:3px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;"></td></tr>
-<tr><td style="background:#0f0f12;padding:20px 28px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0"><tr>
-<td><p style="margin:0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#a9a9b5;">Order Received</p>
-<h1 style="margin:6px 0 0;font-size:24px;font-weight:900;color:#f2f2f2;">Thank you, ${d.customerName}!</h1></td>
-<td align="right" valign="top"><span style="display:inline-block;background:rgba(208,21,31,0.15);border:1px solid rgba(208,21,31,0.6);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:900;color:#ff6b6b;">CONFIRMED</span></td>
-</tr></table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 20px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;margin-top:20px;">
-<tr style="background:#111116;"><td style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Order Summary</td><td align="right" style="padding:8px 14px;font-size:10px;color:#7d7d89;">${d.orderDate}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td colspan="2" style="padding:14px;font-size:13px;color:#d4d4d4;line-height:1.9;font-family:'Courier New',monospace;white-space:pre-line;">${d.cartLines}${d.shipping?`
-Shipping: $${Number(d.shipping).toFixed(2)}`:""}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 20px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(208,21,31,0.4);border-radius:12px;background:rgba(208,21,31,0.07);">
-<tr><td style="padding:14px 16px;font-size:13px;color:#a9a9b5;font-weight:700;">Order Total</td><td align="right" style="padding:14px 16px;font-size:22px;font-weight:900;color:#f2f2f2;">${d.cartTotal}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 20px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;">
-<tr style="background:#111116;"><td style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Payment Instructions</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:14px;font-size:13px;color:#d4d4d4;line-height:1.7;"><strong style="color:#f2f2f2;">Payment Method Selected: ${d.paymentMethod||"Not specified"}</strong><br><br>${getPaymentInstructions(d.paymentMethod, d.cartTotal)}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 24px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;">
-<tr style="background:#111116;"><td style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Pickup / Delivery</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:14px;font-size:13px;color:#d4d4d4;line-height:1.7;">${getFulfillmentInstructions(d.fulfillment)}</td></tr>
-</table></td></tr>
-<tr><td style="background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);height:3px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;"></td></tr>
-<tr><td align="center" style="background:#000;border-radius:0 0 16px 16px;padding:20px 24px;border:1px solid #2a0a0e;border-top:none;">
-<p style="margin:0 0 6px;font-size:12px;font-weight:900;color:#f2f2f2;letter-spacing:0.1em;">SAVAGECELL RESEARCH</p>
-<p style="margin:0 0 8px;font-size:11px;color:#7d7d89;">Questions? Contact us at savagecellresearch@gmail.com</p>
-<p style="margin:0;font-size:10px;color:#555;font-style:italic;">Research use only. Not medical advice.</p>
-</td></tr>
-</table></td></tr></table></body></html>`;
-  await sendEmail(d.customerEmail, `Order Received — SavageCell Research`, html);
+/* ══ ORDERS ══ */
+async function loadOrders(){
+  document.getElementById("ordersBody").innerHTML = `<tr><td colspan="10" class="loading">Loading…</td></tr>`;
+  try{
+    const snap = await db.collection("orders").orderBy("submittedAt","desc").get();
+    allOrders = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderOrders(allOrders);
+  }catch(e){
+    document.getElementById("ordersBody").innerHTML = `<tr><td colspan="10" class="empty-state">Error loading orders. Make sure Firestore rules allow admin access.</td></tr>`;
+  }
 }
 
-/* ══ TRACKING EMAIL ══ */
-async function sendTrackingEmail(d) {
-  const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#0a0a0b;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0b;padding:32px 16px;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-<tr><td align="center" style="background:#000;border-radius:16px 16px 0 0;padding:28px 24px;border:1px solid #2a0a0e;border-bottom:none;">
-<img src="https://savagecellresearch.com/header.jpg" width="220" style="display:block;margin:0 auto;border-radius:10px;"/>
-<p style="margin:14px 0 0;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#a9a9b5;">Members Only Catalog</p>
-</td></tr>
-<tr><td style="background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);height:3px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;"></td></tr>
-<tr><td style="background:#0f0f12;padding:20px 28px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0"><tr>
-<td><p style="margin:0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#a9a9b5;">Your Order Has Shipped</p>
-<h1 style="margin:6px 0 0;font-size:24px;font-weight:900;color:#f2f2f2;">It's on the way, ${d.customerName}!</h1></td>
-<td align="right" valign="top"><span style="display:inline-block;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.5);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:900;color:#4ade80;">SHIPPED</span></td>
-</tr></table></td></tr>
-<tr><td style="background:#0b0b0e;padding:20px 28px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(74,222,128,0.3);border-radius:12px;overflow:hidden;background:rgba(74,222,128,0.05);">
-<tr><td style="padding:8px 16px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;background:#111116;">Tracking Number</td></tr>
-<tr><td style="padding:18px 16px;">
-<div style="font-size:22px;font-weight:900;color:#f2f2f2;letter-spacing:0.1em;font-family:'Courier New',monospace;">${d.trackingNumber}</div>
-<p style="margin:10px 0 0;font-size:13px;color:#a9a9b5;line-height:1.6;">Carrier: <strong style="color:#f2f2f2;">${d.carrier||"See carrier details"}</strong><br>Use this tracking number on your carrier's website to track your shipment. It may take up to 24 hours for tracking to become active.</p>
-</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 24px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;">
-<tr style="background:#111116;"><td style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Order Summary</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;width:120px;">Items</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;white-space:pre-line;">${d.orderLines}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;">Total</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.orderTotal}</td></tr>
-</table></td></tr>
-<tr><td style="background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);height:3px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;"></td></tr>
-<tr><td align="center" style="background:#000;border-radius:0 0 16px 16px;padding:20px 24px;border:1px solid #2a0a0e;border-top:none;">
-<p style="margin:0 0 6px;font-size:12px;font-weight:900;color:#f2f2f2;letter-spacing:0.1em;">SAVAGECELL RESEARCH</p>
-<p style="margin:0 0 8px;font-size:11px;color:#7d7d89;">Questions? Contact us at savagecellresearch@gmail.com</p>
-</td></tr>
-</table></td></tr></table></body></html>`;
-  await sendEmail(d.customerEmail, `Your Order Has Shipped — Tracking # ${d.trackingNumber}`, html);
+function renderOrders(orders){
+  const tbody = document.getElementById("ordersBody");
+  if(!orders.length){ tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No orders yet.</td></tr>`; return; }
+  tbody.innerHTML = orders.map(o => `
+    <tr onclick="openOrderDetail('${o.id}')" style="cursor:pointer;">
+      <td style="white-space:nowrap;color:var(--muted);font-size:11px;">${esc(o.date||o.submittedAt?.split("T")[0]||"—")}</td>
+      <td style="font-weight:900;"><span class="truncate" title="${esc(o.customerName||"—")}">${esc(o.customerName||"—")}</span></td>
+      <td><span class="truncate" title="${esc(o.customerEmail||"—")}" style="color:var(--muted);font-size:11px;">${esc(o.customerEmail||"—")}</span></td>
+      <td><span class="truncate" title="${esc(o.lines||"—")}" style="font-size:11px;">${esc(o.lines||"—")}</span></td>
+      <td style="font-weight:900;white-space:nowrap;">${money(o.total||0)}</td>
+      <td style="font-size:11px;font-weight:900;">${esc(o.paymentMethod||"—")}</td>
+      <td><span class="truncate" title="${esc(o.fulfillment||o.method||"—")}" style="font-size:11px;">${esc(o.fulfillment||o.method||"—")}</span></td>
+      <td onclick="event.stopPropagation()">
+        <select class="inline-select" onchange="updateOrderStatus('${o.id}', this.value)">
+          <option value="Pending" ${(o.status||"Pending")==="Pending"?"selected":""}>Pending</option>
+          <option value="Payment Confirmed" ${o.status==="Payment Confirmed"?"selected":""}>Payment Confirmed</option>
+          <option value="Shipped" ${o.status==="Shipped"?"selected":""}>Shipped</option>
+          <option value="Picked Up" ${o.status==="Picked Up"?"selected":""}>Picked Up</option>
+        </select>
+      </td>
+      <td onclick="event.stopPropagation()">
+        <input class="inline-input" type="text" placeholder="Tracking #" data-tracking-id="${o.id}" value="${esc(o.trackingNumber||"")}" onblur="updateTracking('${o.id}', this.value)" />
+      </td>
+      <td onclick="event.stopPropagation()">
+        <select class="inline-select" data-carrier-id="${o.id}" style="width:100%;" onchange="updateCarrier('${o.id}', this.value)">
+          <option value="" ${!o.carrier?"selected":""}>Select...</option>
+          <option value="USPS" ${o.carrier==="USPS"?"selected":""}>USPS</option>
+          <option value="UPS" ${o.carrier==="UPS"?"selected":""}>UPS</option>
+          <option value="FedEx" ${o.carrier==="FedEx"?"selected":""}>FedEx</option>
+          <option value="DHL" ${o.carrier==="DHL"?"selected":""}>DHL</option>
+          <option value="Other" ${o.carrier==="Other"?"selected":""}>Other</option>
+        </select>
+      </td>
+      <td onclick="event.stopPropagation()">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <button class="btn danger" onclick="deleteOrder('${o.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
+          <button class="btn success" onclick="sendTracking('${o.id}')" style="font-size:11px;padding:5px 10px;">📦 Send Tracking</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
 }
 
-/* ══ RECEIPT EMAIL ══ */
-async function sendReceiptEmail(d) {
-  const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#0a0a0b;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0b;padding:32px 16px;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-<tr><td align="center" style="background:#000;border-radius:16px 16px 0 0;padding:28px 24px;border:1px solid #2a0a0e;border-bottom:none;">
-<img src="https://savagecellresearch.com/header.jpg" width="220" style="display:block;margin:0 auto;border-radius:10px;"/>
-<p style="margin:14px 0 0;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#a9a9b5;">Members Only Catalog</p>
-</td></tr>
-<tr><td style="background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);height:3px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;"></td></tr>
-<tr><td style="background:#0f0f12;padding:20px 28px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0"><tr>
-<td><p style="margin:0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#a9a9b5;">Payment Confirmed</p>
-<h1 style="margin:6px 0 0;font-size:24px;font-weight:900;color:#f2f2f2;">Receipt for ${d.customerName}</h1></td>
-<td align="right" valign="top"><span style="display:inline-block;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.5);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:900;color:#4ade80;">PAID</span></td>
-</tr></table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 20px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;margin-top:20px;">
-<tr style="background:#111116;"><td colspan="2" style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Receipt Details</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;width:140px;">Receipt #</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.receiptNumber}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;">Date Paid</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.datePaid}</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:10px 14px;font-size:12px;color:#7d7d89;font-weight:700;">Payment Method</td><td style="padding:10px 14px;font-size:13px;color:#f2f2f2;font-weight:700;">${d.paymentMethod}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 20px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e28;border-radius:12px;overflow:hidden;">
-<tr style="background:#111116;"><td style="padding:8px 14px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#7d7d89;font-weight:900;">Items Purchased</td></tr>
-<tr style="border-top:1px solid #1e1e28;"><td style="padding:14px;font-size:13px;color:#d4d4d4;line-height:1.9;font-family:'Courier New',monospace;white-space:pre-line;">${d.orderLines}</td></tr>
-</table></td></tr>
-<tr><td style="background:#0b0b0e;padding:0 28px 24px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;">
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(74,222,128,0.3);border-radius:12px;background:rgba(74,222,128,0.05);">
-<tr><td style="padding:14px 16px;font-size:13px;color:#a9a9b5;font-weight:700;">Amount Paid</td><td align="right" style="padding:14px 16px;font-size:22px;font-weight:900;color:#4ade80;">${d.amountPaid}</td></tr>
-</table></td></tr>
-<tr><td style="background:linear-gradient(90deg,#a70e16,#d0151f,#a70e16);height:3px;border-left:1px solid #2a0a0e;border-right:1px solid #2a0a0e;"></td></tr>
-<tr><td align="center" style="background:#000;border-radius:0 0 16px 16px;padding:20px 24px;border:1px solid #2a0a0e;border-top:none;">
-<p style="margin:0 0 6px;font-size:12px;font-weight:900;color:#f2f2f2;letter-spacing:0.1em;">SAVAGECELL RESEARCH</p>
-<p style="margin:0 0 8px;font-size:11px;color:#7d7d89;">Questions? Contact us at savagecellresearch@gmail.com</p>
-<p style="margin:0;font-size:10px;color:#555;font-style:italic;">Research use only. Not medical advice.</p>
-</td></tr>
-</table></td></tr></table></body></html>`;
-  await sendEmail(d.customerEmail, `Payment Receipt — SavageCell Research`, html);
+function filterOrders(){
+  const q = document.getElementById("orderSearch").value.toLowerCase();
+  if(!q){ renderOrders(allOrders); return; }
+  renderOrders(allOrders.filter(o =>
+    (o.customerName||"").toLowerCase().includes(q) ||
+    (o.customerEmail||"").toLowerCase().includes(q) ||
+    (o.status||"").toLowerCase().includes(q) ||
+    (o.lines||"").toLowerCase().includes(q)
+  ));
 }
+
+async function updateOrderStatus(id, status){
+  try{
+    await db.collection("orders").doc(id).update({status});
+    // Auto-send receipt when marked Confirmed
+    if(status === "Payment Confirmed"){
+      const order = allOrders.find(o => o.id === id);
+      if(order && order.customerEmail){
+        const paymentMethod = prompt("Payment method for receipt (e.g. Zelle, Cash App, Venmo):", "Zelle");
+        if(paymentMethod){
+          const receiptNumber = `SCR-${Date.now().toString().slice(-6)}`;
+          try{
+            await sendWorkerEmail("receipt", {
+              customerName: order.customerName||"Customer",
+              customerEmail: order.customerEmail,
+              receiptNumber,
+              datePaid: new Date().toLocaleDateString(),
+              paymentMethod,
+              orderLines: order.lines||order.cartLines||"—",
+              amountPaid: `$${Number(order.total||0).toFixed(2)}`
+            });
+            alert("✅ Order confirmed and receipt sent to customer!");
+          }catch(e){ alert("Order confirmed but receipt email failed."); }
+        }
+      }
+    }
+  }catch(e){ alert("Status update failed."); }
+}
+
+async function updateCarrier(id, carrier){
+  try{ await db.collection("orders").doc(id).update({carrier}); }catch(e){}
+}
+
+async function updateTracking(id, trackingNumber){
+  try{ await db.collection("orders").doc(id).update({trackingNumber}); }catch(e){}
+}
+
+async function deleteOrder(id){
+  if(!confirm("Delete this order? This cannot be undone.")) return;
+  try{
+    await db.collection("orders").doc(id).delete();
+    allOrders = allOrders.filter(o => o.id !== id);
+    renderOrders(allOrders);
+    updateStats();
+  }catch(e){ alert("Delete failed."); }
+}
+
+/* ══ CUSTOMERS (order-based) ══ */
+async function loadCustomerOrders(){
+  document.getElementById("customersBody").innerHTML = `<tr><td colspan="6" class="loading">Loading…</td></tr>`;
+  try{
+    const snap = await db.collection("orders").get();
+    const orders = snap.docs.map(d => d.data());
+    // Group by email
+    const map = {};
+    orders.forEach(o => {
+      const key = (o.customerEmail||"unknown").toLowerCase();
+      if(!map[key]) map[key] = {name:o.customerName||"—", email:key, orders:[], totalSpent:0, lastOrder:"—"};
+      map[key].orders.push(o);
+      map[key].totalSpent += Number(o.total||0);
+      if(!map[key].lastOrder || o.date > map[key].lastOrder) map[key].lastOrder = o.date||"—";
+    });
+    allCustomers = Object.values(map).sort((a,b) => b.totalSpent - a.totalSpent);
+    renderCustomers(allCustomers);
+  }catch(e){
+    document.getElementById("customersBody").innerHTML = `<tr><td colspan="6" class="empty-state">Error loading customers.</td></tr>`;
+  }
+}
+
+function renderCustomers(customers){
+  const tbody = document.getElementById("customersBody");
+  if(!customers.length){ tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No customers yet.</td></tr>`; return; }
+  tbody.innerHTML = customers.map(c => `
+    <tr>
+      <td style="font-weight:900;">${esc(c.name)}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(c.email)}</td>
+      <td style="font-weight:900;">${c.orders.length}</td>
+      <td style="font-weight:900;color:var(--green);">${money(c.totalSpent)}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(c.lastOrder)}</td>
+      <td><a href="mailto:${esc(c.email)}" class="btn" style="font-size:11px;padding:5px 10px;">✉ Email</a></td>
+    </tr>
+  `).join("");
+}
+
+function filterCustomers(){
+  const q = document.getElementById("customerSearch").value.toLowerCase();
+  if(!q){ renderCustomers(allCustomers); return; }
+  renderCustomers(allCustomers.filter(c =>
+    c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
+  ));
+}
+
+/* ══ ACCOUNT HOLDERS ══ */
+async function loadAccounts(){
+  document.getElementById("accountsBody").innerHTML = `<tr><td colspan="6" class="loading">Loading…</td></tr>`;
+  try{
+    const snap = await db.collection("users").get();
+    allAccounts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderAccounts(allAccounts);
+    document.getElementById("statCustomers").textContent = allAccounts.length;
+  }catch(e){
+    document.getElementById("accountsBody").innerHTML = `<tr><td colspan="6" class="empty-state">Error loading accounts.</td></tr>`;
+  }
+}
+
+function renderAccounts(accounts){
+  const tbody = document.getElementById("accountsBody");
+  if(!accounts.length){ tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No accounts yet.</td></tr>`; return; }
+  tbody.innerHTML = accounts.map(a => `
+    <tr>
+      <td style="font-weight:900;">${esc(a.name||"—")}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(a.email||"—")}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(a.createdAt?new Date(a.createdAt).toLocaleDateString():"—")}</td>
+      <td style="font-weight:900;">${(a.orders||[]).length}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(a.shippingAddress||"None saved")}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <a href="mailto:${esc(a.email)}" class="btn" style="font-size:11px;padding:5px 10px;">✉ Email</a>
+        <button class="btn danger" onclick="deleteAccount('${a.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function filterAccounts(){
+  const q = document.getElementById("accountSearch").value.toLowerCase();
+  if(!q){ renderAccounts(allAccounts); return; }
+  renderAccounts(allAccounts.filter(a =>
+    (a.name||"").toLowerCase().includes(q) || (a.email||"").toLowerCase().includes(q)
+  ));
+}
+
+async function deleteAccount(id){
+  if(!confirm("Delete this account? This cannot be undone.")) return;
+  try{
+    await db.collection("users").doc(id).delete();
+    allAccounts = allAccounts.filter(a => a.id !== id);
+    renderAccounts(allAccounts);
+    document.getElementById("statCustomers").textContent = allAccounts.length;
+  }catch(e){ alert("Delete failed."); }
+}
+
+async function sendTracking(id){
+  const order = allOrders.find(o => o.id === id);
+  if(!order) return;
+  const inputEl = document.querySelector(`input[data-tracking-id="${id}"]`);
+  const carrierEl = document.querySelector(`select[data-carrier-id="${id}"]`);
+  const trackingNumber = inputEl ? inputEl.value.trim() : order.trackingNumber;
+  const carrier = carrierEl ? carrierEl.value : order.carrier||"";
+  if(!trackingNumber){ alert("Please enter a tracking number first."); return; }
+  if(!order.customerEmail){ alert("No customer email on this order."); return; }
+  if(!confirm(`Send tracking number "${trackingNumber}" via ${carrier||"carrier"} to ${order.customerEmail}?`)) return;
+  try{ await db.collection("orders").doc(id).update({trackingNumber, carrier}); }catch(e){}
+  try{
+    await sendWorkerEmail("tracking", {
+      customerName: order.customerName||"Customer",
+      customerEmail: order.customerEmail,
+      trackingNumber,
+      carrier: carrier||"your carrier",
+      orderLines: order.lines||order.cartLines||"—",
+      orderTotal: `$${Number(order.total||0).toFixed(2)}`
+    });
+    alert("✅ Tracking email sent!");
+  }catch(e){ alert("Failed to send tracking email."); }
+}
+
+async function sendReceipt(id){
+  const order = allOrders.find(o => o.id === id);
+  if(!order) return;
+  if(!order.customerEmail){ alert("No customer email on this order."); return; }
+  const paymentMethod = prompt("Payment method (e.g. Zelle, Cash App, Venmo):", "Zelle");
+  if(!paymentMethod) return;
+  const receiptNumber = `SCR-${Date.now().toString().slice(-6)}`;
+  try{
+    await sendWorkerEmail("receipt", {
+      customerName: order.customerName||"Customer",
+      customerEmail: order.customerEmail,
+      receiptNumber,
+      datePaid: new Date().toLocaleDateString(),
+      paymentMethod,
+      orderLines: order.lines||order.cartLines||"—",
+      amountPaid: `$${Number(order.total||0).toFixed(2)}`
+    });
+    // Update order status to Confirmed
+    await db.collection("orders").doc(id).update({status:"Confirmed"});
+    await loadOrders();
+    alert("✅ Receipt sent and order marked as Confirmed!");
+  }catch(e){ alert("Failed to send receipt."); }
+}
+
+/* ══ STATS ══ */
+function updateStats(){
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+
+  const thisMonthOrders = allOrders.filter(o => {
+    const d = new Date(o.submittedAt||o.date);
+    return d.getMonth()===thisMonth && d.getFullYear()===thisYear;
+  });
+
+  const totalRevenue = allOrders.reduce((a,o) => a + Number(o.total||0), 0);
+  const monthRevenue = thisMonthOrders.reduce((a,o) => a + Number(o.total||0), 0);
+  const monthAvg = thisMonthOrders.length ? monthRevenue/thisMonthOrders.length : 0;
+
+  // Tally items sold from order cart lines
+  function parseItemsSold(orders){
+    const tally = {};
+    let total = 0;
+    orders.forEach(o => {
+      // cartLines is stored as a string: "BPC-157 (10mg) x3 = $75.00\nSS-31 (50mg) x1 = $125.00"
+      const raw = typeof o.cartLines === "string" ? o.cartLines : (typeof o.lines === "string" ? o.lines : "");
+      if(!raw) return;
+      raw.split("\n").forEach(line => {
+        line = line.trim();
+        if(!line) return;
+        // Match: "Product Name (strength) xQty" or "Product Name xQty"
+        const mFull = line.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)/);
+        const mSimple = line.match(/^(.+?)\s*x(\d+)/);
+        if(mFull){
+          const key = `${mFull[1].trim()} — ${mFull[2].trim()}`;
+          const qty = Number(mFull[3])||1;
+          tally[key] = (tally[key]||0) + qty;
+          total += qty;
+        } else if(mSimple){
+          const key = mSimple[1].trim();
+          const qty = Number(mSimple[2])||1;
+          tally[key] = (tally[key]||0) + qty;
+          total += qty;
+        }
+      });
+    });
+    return {tally, total};
+  }
+
+  const {tally: allTimeTally, total: allTimeUnits} = parseItemsSold(allOrders);
+  const {total: thisMonthUnits} = parseItemsSold(thisMonthOrders);
+  window._itemsTally = allTimeTally; // store for modal
+
+  document.getElementById("statItemsSold").textContent = allTimeUnits.toLocaleString();
+  const imEl = document.getElementById("statItemsMonth");
+  imEl.textContent = `This month: ${thisMonthUnits}`;
+  imEl.className = `stat-month ${thisMonthUnits > 0 ? "up" : "neutral"}`;
+
+  document.getElementById("statRevenue").textContent = money(totalRevenue);
+  document.getElementById("statOrders").textContent = allOrders.length;
+  document.getElementById("statAvg").textContent = allOrders.length ? money(totalRevenue/allOrders.length) : "$0.00";
+
+  const rmEl = document.getElementById("statRevenueMonth");
+  rmEl.textContent = `This month: ${money(monthRevenue)}`;
+  rmEl.className = `stat-month ${monthRevenue>0?"up":"neutral"}`;
+
+  const omEl = document.getElementById("statOrdersMonth");
+  omEl.textContent = `This month: ${thisMonthOrders.length}`;
+  omEl.className = `stat-month ${thisMonthOrders.length>0?"up":"neutral"}`;
+
+  const cmEl = document.getElementById("statCustomersMonth");
+  const thisMonthAccounts = allAccounts.filter(a => {
+    const d = new Date(a.createdAt);
+    return d.getMonth()===thisMonth && d.getFullYear()===thisYear;
+  });
+  cmEl.textContent = `Joined this month: ${thisMonthAccounts.length}`;
+  cmEl.className = `stat-month ${thisMonthAccounts.length>0?"up":"neutral"}`;
+
+  const amEl = document.getElementById("statAvgMonth");
+  amEl.textContent = `This month avg: ${money(monthAvg)}`;
+  amEl.className = `stat-month ${monthAvg>0?"up":"neutral"}`;
+}
+
+function openStatModal(type){
+  const modal = document.getElementById("statModal");
+  const title = document.getElementById("modalTitle");
+  const body = document.getElementById("modalBody");
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+  const monthName = now.toLocaleString("default",{month:"long"});
+
+  if(type === "revenue"){
+    title.textContent = "💰 Revenue Breakdown";
+    // Last 6 months
+    const months = [];
+    for(let i=5;i>=0;i--){
+      const d = new Date(thisYear, thisMonth-i, 1);
+      const m = d.getMonth(), y = d.getFullYear();
+      const label = d.toLocaleString("default",{month:"short",year:"2-digit"});
+      const rev = allOrders.filter(o=>{
+        const od=new Date(o.submittedAt||o.date); return od.getMonth()===m&&od.getFullYear()===y;
+      }).reduce((a,o)=>a+Number(o.total||0),0);
+      months.push({label,rev});
+    }
+    const maxRev = Math.max(...months.map(m=>m.rev), 1);
+    const totalRevenue = allOrders.reduce((a,o)=>a+Number(o.total||0),0);
+    const thisMonthRev = months[5].rev;
+    body.innerHTML = `
+      <div class="modal-section">
+        <div class="modal-section-title">Summary</div>
+        <div class="modal-row"><span class="label">All-time Revenue</span><span class="val">${money(totalRevenue)}</span></div>
+        <div class="modal-row"><span class="label">${monthName} Revenue</span><span class="val" style="color:#4ade80">${money(thisMonthRev)}</span></div>
+        <div class="modal-row"><span class="label">Total Orders</span><span class="val">${allOrders.length}</span></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Last 6 Months</div>
+        <div class="bar-wrap">
+          ${months.map(m=>`
+            <div class="bar-row">
+              <div class="bar-label">${m.label}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${m.rev?Math.max((m.rev/maxRev)*100,4):0}%"></div></div>
+              <div class="bar-val">${money(m.rev)}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+  }
+
+  else if(type === "orders"){
+    title.textContent = "📦 Orders Breakdown";
+    const statuses = ["Pending","Payment Confirmed","Shipped","Picked Up"];
+    const thisMonthOrders = allOrders.filter(o=>{const d=new Date(o.submittedAt||o.date);return d.getMonth()===thisMonth&&d.getFullYear()===thisYear;});
+    const lastMonthOrders = allOrders.filter(o=>{const d=new Date(o.submittedAt||o.date);const lm=new Date(thisYear,thisMonth-1,1);return d.getMonth()===lm.getMonth()&&d.getFullYear()===lm.getFullYear();});
+    body.innerHTML = `
+      <div class="modal-section">
+        <div class="modal-section-title">This Month vs Last Month</div>
+        <div class="modal-row"><span class="label">${monthName}</span><span class="val" style="color:#4ade80">${thisMonthOrders.length} orders — ${money(thisMonthOrders.reduce((a,o)=>a+Number(o.total||0),0))}</span></div>
+        <div class="modal-row"><span class="label">Last Month</span><span class="val">${lastMonthOrders.length} orders — ${money(lastMonthOrders.reduce((a,o)=>a+Number(o.total||0),0))}</span></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">By Status</div>
+        ${statuses.map(s=>{
+          const count=allOrders.filter(o=>(o.status||"Pending")===s).length;
+          return `<div class="modal-row"><span class="label">${s}</span><span class="val">${count}</span></div>`;
+        }).join("")}
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Fulfillment Split</div>
+        ${["pickup","ship"].map(f=>{
+          const count=allOrders.filter(o=>(o.method||o.fulfillment||"").toLowerCase().includes(f==="pickup"?"pickup":"ship")).length;
+          return `<div class="modal-row"><span class="label">${f==="pickup"?"📦 Local Pickup":"🚚 Shipped"}</span><span class="val">${count}</span></div>`;
+        }).join("")}
+      </div>`;
+  }
+
+  else if(type === "customers"){
+    title.textContent = "👥 Customer Breakdown";
+    const sorted = [...allCustomers].sort((a,b)=>b.totalSpent-a.totalSpent).slice(0,5);
+    const thisMonthAccounts = allAccounts.filter(a=>{const d=new Date(a.createdAt);return d.getMonth()===thisMonth&&d.getFullYear()===thisYear;});
+    body.innerHTML = `
+      <div class="modal-section">
+        <div class="modal-section-title">Account Summary</div>
+        <div class="modal-row"><span class="label">Total Accounts</span><span class="val">${allAccounts.length}</span></div>
+        <div class="modal-row"><span class="label">Joined This Month</span><span class="val" style="color:#4ade80">${thisMonthAccounts.length}</span></div>
+        <div class="modal-row"><span class="label">With Orders</span><span class="val">${allCustomers.length}</span></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Top 5 Customers by Spend</div>
+        ${sorted.length ? sorted.map((c,i)=>`
+          <div class="modal-row">
+            <span class="label">${i+1}. ${c.name} <span style="color:var(--muted2);font-size:11px;">(${c.orders.length} orders)</span></span>
+            <span class="val" style="color:#4ade80">${money(c.totalSpent)}</span>
+          </div>`).join("") : `<div class="modal-row"><span class="label">No orders yet</span></div>`}
+      </div>`;
+  }
+
+  else if(type === "avg"){
+    title.textContent = "📊 Order Value Breakdown";
+    const totals = allOrders.map(o=>Number(o.total||0)).filter(t=>t>0);
+    const max = totals.length ? Math.max(...totals) : 0;
+    const min = totals.length ? Math.min(...totals) : 0;
+    const avg = totals.length ? totals.reduce((a,b)=>a+b,0)/totals.length : 0;
+    const thisMonthOrders = allOrders.filter(o=>{const d=new Date(o.submittedAt||o.date);return d.getMonth()===thisMonth&&d.getFullYear()===thisYear;});
+    const monthAvg = thisMonthOrders.length ? thisMonthOrders.reduce((a,o)=>a+Number(o.total||0),0)/thisMonthOrders.length : 0;
+    // Top 5 orders
+    const top5 = [...allOrders].sort((a,b)=>Number(b.total||0)-Number(a.total||0)).slice(0,5);
+    body.innerHTML = `
+      <div class="modal-section">
+        <div class="modal-section-title">Value Stats</div>
+        <div class="modal-row"><span class="label">All-time Average</span><span class="val">${money(avg)}</span></div>
+        <div class="modal-row"><span class="label">${monthName} Average</span><span class="val" style="color:#4ade80">${money(monthAvg)}</span></div>
+        <div class="modal-row"><span class="label">Highest Order</span><span class="val">${money(max)}</span></div>
+        <div class="modal-row"><span class="label">Lowest Order</span><span class="val">${money(min)}</span></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Top 5 Largest Orders</div>
+        ${top5.map(o=>`
+          <div class="modal-row">
+            <span class="label">${o.customerName||"—"} <span style="color:var(--muted2);font-size:11px;">${o.date||""}</span></span>
+            <span class="val">${money(o.total||0)}</span>
+          </div>`).join("")}
+      </div>`;
+  }
+
+  else if(type === "items"){
+    title.textContent = "📦 Items Sold Breakdown";
+    const tally = window._itemsTally || {};
+    const sorted = Object.entries(tally).sort((a,b) => b[1]-a[1]);
+    const maxQty = sorted.length ? sorted[0][1] : 1;
+    const totalUnits = sorted.reduce((a,b) => a+b[1], 0);
+    const thisMonthTally = {};
+    allOrders.filter(o=>{
+      const d=new Date(o.submittedAt||o.date);
+      return d.getMonth()===thisMonth&&d.getFullYear()===thisYear;
+    }).forEach(o => {
+      const raw = typeof o.cartLines === "string" ? o.cartLines : (typeof o.lines === "string" ? o.lines : "");
+      if(!raw) return;
+      raw.split("\n").forEach(line => {
+        line = line.trim(); if(!line) return;
+        const mFull = line.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)/);
+        const mSimple = line.match(/^(.+?)\s*x(\d+)/);
+        if(mFull){
+          const key = `${mFull[1].trim()} — ${mFull[2].trim()}`;
+          thisMonthTally[key] = (thisMonthTally[key]||0) + (Number(mFull[3])||1);
+        } else if(mSimple){
+          const key = mSimple[1].trim();
+          thisMonthTally[key] = (thisMonthTally[key]||0) + (Number(mSimple[2])||1);
+        }
+      });
+    });
+    body.innerHTML = `
+      <div class="modal-section">
+        <div class="modal-section-title">Summary</div>
+        <div class="modal-row"><span class="label">Total Units Sold</span><span class="val">${totalUnits.toLocaleString()}</span></div>
+        <div class="modal-row"><span class="label">Unique Products</span><span class="val">${sorted.length}</span></div>
+        <div class="modal-row"><span class="label">Best Seller</span><span class="val" style="color:#a855f7">${sorted[0]?sorted[0][0]:"—"}</span></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">All Products — Units Sold</div>
+        <div class="bar-wrap">
+          ${sorted.length ? sorted.map(([name, qty]) => {
+            const monthQty = thisMonthTally[name]||0;
+            return `
+            <div class="bar-row">
+              <div class="bar-label" title="${name}" style="width:140px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${Math.max((qty/maxQty)*100,4)}%;background:linear-gradient(90deg,#7e22ce,#a855f7);"></div></div>
+              <div class="bar-val" style="width:70px;">${qty} <span style="color:var(--muted2);font-size:10px;">${monthQty>0?`+${monthQty} mo`:""}</span></div>
+            </div>`;
+          }).join("") : `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No item data yet. Orders need cart line details to populate this breakdown.</div>`}
+        </div>
+      </div>`;
+  }
+
+  modal.classList.add("open");
+  document.body.style.overflow="hidden";
+}
+
+function openOrderDetail(id){
+  const o = allOrders.find(o => o.id === id);
+  if(!o) return;
+
+  // Parse cart lines into rows
+  const raw = typeof o.cartLines === "string" ? o.cartLines : (typeof o.lines === "string" ? o.lines : "");
+  let itemRows = "";
+  if(raw){
+    raw.split("\n").forEach(line => {
+      line = line.trim(); if(!line) return;
+      // Format: "Product (strength) xQty = $price"
+      const m = line.match(/^(.+?)\s*(?:\((.+?)\))?\s*x(\d+)\s*=\s*(\S+)/);
+      if(m){
+        itemRows += `<div class="modal-row"><span class="label">${esc(m[1].trim())}${m[2]?' <span style="color:var(--muted2);font-size:11px;">('+esc(m[2])+')</span>':''}</span><span class="val">${esc(m[4])} <span style="color:var(--muted);">x${m[3]}</span></span></div>`;
+      } else {
+        itemRows += `<div class="modal-row"><span class="label">${esc(line)}</span></div>`;
+      }
+    });
+  } else {
+    itemRows = `<div class="modal-row"><span class="label" style="color:var(--muted);">No item detail available</span></div>`;
+  }
+
+  const statusColor = {
+    "Pending": "var(--yellow)",
+    "Payment Confirmed": "var(--blue)",
+    "Shipped": "var(--green)",
+    "Picked Up": "var(--green)"
+  }[o.status||"Pending"] || "var(--muted)";
+
+  document.getElementById("orderDetailTitle").textContent = `Order — ${o.customerName||"Unknown"}`;
+  document.getElementById("orderDetailBody").innerHTML = `
+    <div class="modal-section">
+      <div class="modal-section-title">Customer</div>
+      <div class="modal-row"><span class="label">Name</span><span class="val">${esc(o.customerName||"—")}</span></div>
+      <div class="modal-row"><span class="label">Email</span><span class="val" style="font-size:12px;">${esc(o.customerEmail||"—")}</span></div>
+      <div class="modal-row"><span class="label">Phone</span><span class="val">${esc(o.customerPhone||"—")}</span></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Items Ordered</div>
+      ${itemRows}
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Order Info</div>
+      <div class="modal-row"><span class="label">Date</span><span class="val">${esc(o.date||o.submittedAt?.split("T")[0]||"—")}</span></div>
+      <div class="modal-row"><span class="label">Subtotal</span><span class="val">${esc(o.cartTotal||money(o.total||0))}</span></div>
+      ${o.discountTotal>0?`<div class="modal-row"><span class="label">Discounts</span><span class="val" style="color:var(--green);">-${money(o.discountTotal)}</span></div>`:""}
+      <div class="modal-row"><span class="label">Total</span><span class="val" style="font-size:16px;font-weight:980;">${money(o.total||0)}</span></div>
+      <div class="modal-row"><span class="label">Payment</span><span class="val">${esc(o.paymentMethod||"—")}</span></div>
+      <div class="modal-row"><span class="label">Fulfillment</span><span class="val">${esc(o.fulfillment||o.method||"—")}</span></div>
+      ${o.notes?`<div class="modal-row"><span class="label">Notes</span><span class="val" style="font-size:12px;white-space:pre-wrap;">${esc(o.notes)}</span></div>`:""}
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Status</div>
+      <div class="modal-row"><span class="label">Current Status</span><span class="val" style="color:${statusColor};">${esc(o.status||"Pending")}</span></div>
+      ${o.trackingNumber?`<div class="modal-row"><span class="label">Tracking #</span><span class="val">${esc(o.trackingNumber)}</span></div>`:""}
+      ${o.carrier?`<div class="modal-row"><span class="label">Carrier</span><span class="val">${esc(o.carrier)}</span></div>`:""}
+    </div>
+  `;
+
+  document.getElementById("orderDetailModal").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeOrderDetail(){
+  document.getElementById("orderDetailModal").classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+function closeStatModal(){
+  document.getElementById("statModal").classList.remove("open");
+  document.body.style.overflow="";
+}
+
+document.getElementById("statModal").addEventListener("click", (e)=>{
+  if(e.target===document.getElementById("statModal")) closeStatModal();
+});
+document.getElementById("orderDetailModal").addEventListener("click", (e)=>{
+  if(e.target===document.getElementById("orderDetailModal")) closeOrderDetail();
+});
+
+/* ══ TABS ══ */
+function switchTab(name){
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById(`panel-${name}`).classList.add("active");
+  if(name==="promotions"){
+    populatePromoCodeDropdown();
+    loadPromoHistory();
+    // init button states
+    setPromoAudience("all");
+    setPromoCodeMode("existing");
+  }
+}
+
+
+
+/* ══ DISCOUNT CODES ══ */
+let allDiscounts = [];
+
+async function loadDiscounts(){
+  document.getElementById("discountsBody").innerHTML = `<tr><td colspan="8" class="loading">Loading…</td></tr>`;
+  try{
+    const snap = await db.collection("discountCodes").orderBy("createdAt","desc").get();
+    allDiscounts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderDiscounts();
+  }catch(e){
+    document.getElementById("discountsBody").innerHTML = `<tr><td colspan="8" class="empty-state">Error loading codes.</td></tr>`;
+  }
+}
+
+function renderDiscounts(){
+  const tbody = document.getElementById("discountsBody");
+  if(!allDiscounts.length){ tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No discount codes yet.</td></tr>`; return; }
+  tbody.innerHTML = allDiscounts.map(d => `
+    <tr>
+      <td style="font-weight:980;font-family:monospace;letter-spacing:.1em;">${esc(d.code)}</td>
+      <td style="font-weight:900;color:#4ade80;">${d.pct}%</td>
+      <td style="font-size:12px;color:var(--muted);">${d.expiresAt||"—"}</td>
+      <td style="font-size:12px;">${d.useLimit||"∞"}</td>
+      <td style="font-size:12px;">${d.usedCount||0}</td>
+      <td style="font-size:12px;">${d.singleUse?"Yes":"No"}</td>
+      <td>
+        <select class="inline-select" onchange="toggleDiscountActive('${d.id}', this.value==='true')">
+          <option value="true" ${d.active?"selected":""}>Active</option>
+          <option value="false" ${!d.active?"selected":""}>Inactive</option>
+        </select>
+      </td>
+      <td>
+        <button class="btn danger" onclick="deleteDiscount('${d.id}')" style="font-size:11px;padding:5px 10px;">🗑 Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function createDiscount(){
+  const code = document.getElementById("newCode").value.trim().toUpperCase();
+  const pct = Number(document.getElementById("newPct").value);
+  const expiry = document.getElementById("newExpiry").value;
+  const limit = document.getElementById("newLimit").value;
+  const singleUse = document.getElementById("newSingleUse").checked;
+  const msg = document.getElementById("discountCreateMsg");
+
+  if(!code){ msg.style.color="#ff6b6b"; msg.textContent="Please enter a code."; return; }
+  if(!pct||pct<1||pct>100){ msg.style.color="#ff6b6b"; msg.textContent="Please enter a valid percentage (1-100)."; return; }
+
+  try{
+    // Check if code already exists
+    const existing = await db.collection("discountCodes").where("code","==",code).get();
+    if(!existing.empty){ msg.style.color="#ff6b6b"; msg.textContent="Code already exists."; return; }
+
+    await db.collection("discountCodes").add({
+      code, pct,
+      expiresAt: expiry||null,
+      useLimit: limit?Number(limit):null,
+      usedCount: 0,
+      singleUse,
+      usedBy: [],
+      active: true,
+      createdAt: new Date().toISOString()
+    });
+
+    msg.style.color="#4ade80"; msg.textContent=`✅ Code "${code}" created!`;
+    document.getElementById("newCode").value="";
+    document.getElementById("newPct").value="";
+    document.getElementById("newExpiry").value="";
+    document.getElementById("newLimit").value="";
+    document.getElementById("newSingleUse").checked=false;
+    await loadDiscounts();
+    setTimeout(()=>msg.textContent="",3000);
+  }catch(e){ msg.style.color="#ff6b6b"; msg.textContent="Error creating code."; }
+}
+
+async function toggleDiscountActive(id, active){
+  try{ await db.collection("discountCodes").doc(id).update({active}); }catch(e){ alert("Update failed."); }
+}
+
+async function deleteDiscount(id){
+  if(!confirm("Delete this code? This cannot be undone.")) return;
+  try{
+    await db.collection("discountCodes").doc(id).delete();
+    allDiscounts = allDiscounts.filter(d => d.id !== id);
+    renderDiscounts();
+  }catch(e){ alert("Delete failed."); }
+}
+
+function togglePw(id, btn){
+  const input = document.getElementById(id);
+  if(input.type === "password"){ input.type = "text"; btn.textContent = "🙈"; }
+  else { input.type = "password"; btn.textContent = "👁"; }
+}
+
+/* ══ PROMOTIONS ══ */
+let promoAudience = "all";   // "all" | "one"
+let promoCodeMode = "existing"; // "existing" | "new"
+let promoSelectedEmail = "";
+
+function setPromoAudience(mode){
+  promoAudience = mode;
+  document.getElementById("promoAudAll").style.borderColor = mode==="all" ? "rgba(208,21,31,.8)" : "";
+  document.getElementById("promoAudAll").style.background  = mode==="all" ? "rgba(208,21,31,.15)" : "";
+  document.getElementById("promoAudOne").style.borderColor = mode==="one" ? "rgba(208,21,31,.8)" : "";
+  document.getElementById("promoAudOne").style.background  = mode==="one" ? "rgba(208,21,31,.15)" : "";
+  document.getElementById("promoSingleWrap").style.display = mode==="one" ? "block" : "none";
+  promoSelectedEmail = "";
+}
+
+function setPromoCodeMode(mode){
+  promoCodeMode = mode;
+  document.getElementById("promoCodeExisting").style.borderColor = mode==="existing" ? "rgba(208,21,31,.8)" : "";
+  document.getElementById("promoCodeExisting").style.background  = mode==="existing" ? "rgba(208,21,31,.15)" : "";
+  document.getElementById("promoCodeNew").style.borderColor = mode==="new" ? "rgba(208,21,31,.8)" : "";
+  document.getElementById("promoCodeNew").style.background  = mode==="new" ? "rgba(208,21,31,.15)" : "";
+  document.getElementById("promoCodeExistingWrap").style.display = mode==="existing" ? "block" : "none";
+  document.getElementById("promoCodeNewWrap").style.display      = mode==="new"      ? "block" : "none";
+}
+
+function filterPromoAccounts(){
+  const q = document.getElementById("promoSingleEmail").value.toLowerCase();
+  const box = document.getElementById("promoAccountSuggestions");
+  if(!q){ box.style.display="none"; return; }
+  const matches = allAccounts.filter(a =>
+    (a.name||"").toLowerCase().includes(q) || (a.email||"").toLowerCase().includes(q)
+  ).slice(0,8);
+  if(!matches.length){ box.style.display="none"; return; }
+  box.innerHTML = matches.map(a => `
+    <div onclick="selectPromoAccount('${esc(a.email)}','${esc(a.name||a.email)}')"
+         style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid rgba(255,255,255,.06);"
+         onmouseover="this.style.background='rgba(208,21,31,.1)'" onmouseout="this.style.background=''">
+      <span style="font-weight:900;">${esc(a.name||"—")}</span>
+      <span style="color:var(--muted);margin-left:6px;">${esc(a.email)}</span>
+    </div>
+  `).join("");
+  box.style.display = "block";
+}
+
+function selectPromoAccount(email, label){
+  promoSelectedEmail = email;
+  document.getElementById("promoSingleEmail").value = label;
+  document.getElementById("promoAccountSuggestions").style.display = "none";
+}
+
+function getPromoCode(){
+  if(promoCodeMode === "existing"){
+    return document.getElementById("promoExistingCode").value || "";
+  } else {
+    return (document.getElementById("promoNewCode").value||"").trim().toUpperCase();
+  }
+}
+
+function buildPromoEmailHTML(data){
+  const {headline, message, code, pct, dealProduct, dealPrice, dealExpiry, recipientName} = data;
+  return `
+  <div style="font-family:ui-sans-serif,system-ui,sans-serif;background:#050506;padding:32px 20px;max-width:560px;margin:0 auto;border-radius:16px;border:1px solid rgba(208,21,31,.3);">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:22px;font-weight:900;color:#f2f2f2;letter-spacing:.5px;">SavageCell Research</div>
+      <div style="font-size:12px;color:#a9a9b5;letter-spacing:.15em;text-transform:uppercase;margin-top:4px;">Member Exclusive</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(208,21,31,.25),rgba(208,21,31,.08));border:1px solid rgba(208,21,31,.4);border-radius:14px;padding:24px;margin-bottom:20px;">
+      <div style="font-size:20px;font-weight:900;color:#f2f2f2;margin-bottom:12px;">${headline||"Special Offer Just for You"}</div>
+      ${recipientName ? `<div style="font-size:13px;color:#a9a9b5;margin-bottom:10px;">Hi ${recipientName},</div>` : ""}
+      <div style="font-size:14px;color:#d0d0d8;line-height:1.6;white-space:pre-wrap;">${message||""}</div>
+    </div>
+    ${dealProduct ? `
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px;">Featured Deal</div>
+        <div style="font-size:16px;font-weight:900;color:#f2f2f2;">${dealProduct}</div>
+        ${dealExpiry ? `<div style="font-size:11px;color:#a9a9b5;margin-top:4px;">Valid through ${dealExpiry}</div>` : ""}
+      </div>
+      <div style="font-size:26px;font-weight:900;color:#4ade80;">${dealPrice}</div>
+    </div>` : ""}
+    ${code ? `
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Your Discount Code${pct ? ` — ${pct}% Off` : ""}</div>
+      <div style="display:inline-block;background:rgba(208,21,31,.15);border:2px dashed rgba(208,21,31,.6);border-radius:10px;padding:10px 28px;font-size:22px;font-weight:900;color:#f2f2f2;letter-spacing:.2em;">${code}</div>
+    </div>` : ""}
+    <div style="text-align:center;margin-bottom:24px;">
+      <a href="https://savagecellresearch.com" style="display:inline-block;background:linear-gradient(180deg,rgba(208,21,31,.9),rgba(167,14,22,.9));color:#fff;font-weight:900;font-size:14px;padding:13px 36px;border-radius:12px;text-decoration:none;">🛒 Shop Now</a>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#7d7d89;border-top:1px solid rgba(255,255,255,.06);padding-top:16px;">
+      SavageCell Research · savagecellresearch.com<br>
+      For research purposes only. Must be 21+.
+    </div>
+  </div>`;
+}
+
+function previewPromoEmail(){
+  const code = getPromoCode();
+  const pct = promoCodeMode==="existing"
+    ? (allDiscounts.find(d=>d.code===code)?.pct||"")
+    : (document.getElementById("promoNewPct").value||"");
+  const html = buildPromoEmailHTML({
+    headline: document.getElementById("promoHeadline").value,
+    message:  document.getElementById("promoMessage").value,
+    code, pct,
+    dealProduct: document.getElementById("promoDealProduct").value,
+    dealPrice:   document.getElementById("promoDealPrice").value,
+    dealExpiry:  document.getElementById("promoDealExpiry").value,
+    recipientName: promoAudience==="one" ? (document.getElementById("promoSingleEmail").value||"") : "Member",
+  });
+  document.getElementById("promoPreviewBox").innerHTML = html;
+}
+
+async function sendPromoEmail(){
+  const msg     = document.getElementById("promoSendMsg");
+  const subject = document.getElementById("promoSubject").value.trim();
+  const headline= document.getElementById("promoHeadline").value.trim();
+  const message = document.getElementById("promoMessage").value.trim();
+  const code    = getPromoCode();
+  const pct     = promoCodeMode==="existing"
+    ? (allDiscounts.find(d=>d.code===code)?.pct||"")
+    : (document.getElementById("promoNewPct").value||"");
+  const dealProduct = document.getElementById("promoDealProduct").value.trim();
+  const dealPrice   = document.getElementById("promoDealPrice").value.trim();
+  const dealExpiry  = document.getElementById("promoDealExpiry").value.trim();
+
+  if(!subject){ msg.style.color="#ff6b6b"; msg.textContent="Please enter an email subject."; return; }
+  if(!headline&&!message){ msg.style.color="#ff6b6b"; msg.textContent="Please enter a headline or message."; return; }
+
+  // If creating a new code, validate and save it first
+  if(promoCodeMode==="new" && code){
+    if(!pct||Number(pct)<1||Number(pct)>100){ msg.style.color="#ff6b6b"; msg.textContent="Please enter a valid discount percentage."; return; }
+    const existing = await db.collection("discountCodes").where("code","==",code).get();
+    if(!existing.empty){ msg.style.color="#ff6b6b"; msg.textContent=`Code "${code}" already exists. Pick a different name.`; return; }
+    const expiry = document.getElementById("promoNewExpiry").value||null;
+    await db.collection("discountCodes").add({
+      code, pct: Number(pct), expiresAt: expiry, useLimit: null,
+      usedCount: 0, singleUse: false, usedBy: [], active: true,
+      createdAt: new Date().toISOString()
+    });
+    await loadDiscounts(); // sync to Discount Codes tab
+    document.getElementById("promoNewCodeMsg").style.color="#4ade80";
+    document.getElementById("promoNewCodeMsg").textContent=`✅ Code "${code}" created and synced!`;
+  }
+
+  // Build recipient list
+  let recipients = [];
+  if(promoAudience==="all"){
+    recipients = allAccounts.filter(a=>a.email).map(a=>({email:a.email, name:a.name||"Member"}));
+    if(!recipients.length){ msg.style.color="#ff6b6b"; msg.textContent="No account holders found to send to."; return; }
+    if(!confirm(`Send this promo to all ${recipients.length} account holders?`)) return;
+  } else {
+    const targetEmail = promoSelectedEmail || document.getElementById("promoSingleEmail").value.trim();
+    if(!targetEmail){ msg.style.color="#ff6b6b"; msg.textContent="Please enter or select a recipient email."; return; }
+    const acct = allAccounts.find(a=>(a.email||"").toLowerCase()===targetEmail.toLowerCase());
+    recipients = [{email: targetEmail, name: acct?.name||"Member"}];
+  }
+
+  msg.style.color="#a9a9b5"; msg.textContent=`Sending to ${recipients.length} recipient${recipients.length>1?"s":""}…`;
+
+  let sent=0, failed=0;
+  for(const r of recipients){
+    const html = buildPromoEmailHTML({headline, message, code, pct, dealProduct, dealPrice, dealExpiry, recipientName: r.name});
+    try{
+      await sendWorkerEmail("promo", {
+        recipientName: r.name,
+        recipientEmail: r.email,
+        subject,
+        htmlBody: html,
+      });
+      sent++;
+    } catch(e){ failed++; }
+  }
+
+  // Save to history
+  await db.collection("promoHistory").add({
+    subject, headline, code: code||null, pct: pct||null,
+    audience: promoAudience==="all" ? `All accounts (${recipients.length})` : recipients[0].email,
+    sentCount: sent, failedCount: failed,
+    sentAt: new Date().toISOString(),
+    sentBy: ADMIN_EMAIL,
+  });
+  await loadPromoHistory();
+
+  if(failed===0){
+    msg.style.color="#4ade80"; msg.textContent=`✅ Sent to ${sent} recipient${sent>1?"s":""}!`;
+  } else {
+    msg.style.color="#fbbf24"; msg.textContent=`⚠️ Sent: ${sent}, Failed: ${failed}`;
+  }
+}
+
+async function loadPromoHistory(){
+  const list = document.getElementById("promoHistoryList");
+  try{
+    const snap = await db.collection("promoHistory").orderBy("sentAt","desc").limit(20).get();
+    if(snap.empty){ list.innerHTML=`<div style="color:var(--muted);font-size:12px;font-style:italic;">No promos sent yet.</div>`; return; }
+    list.innerHTML = snap.docs.map(d => {
+      const h = d.data();
+      const date = h.sentAt ? new Date(h.sentAt).toLocaleString() : "—";
+      return `
+      <div style="border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;font-size:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
+          <div style="font-weight:900;color:var(--ink);flex:1;">${esc(h.subject||"—")}</div>
+          ${h.code ? `<div style="background:rgba(208,21,31,.15);border:1px solid rgba(208,21,31,.4);border-radius:6px;padding:2px 8px;font-family:monospace;font-weight:900;color:#f2f2f2;white-space:nowrap;">${esc(h.code)}</div>` : ""}
+        </div>
+        <div style="color:var(--muted);margin-top:4px;">${esc(h.audience||"—")}</div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;color:var(--muted2);font-size:11px;">
+          <span>✅ ${h.sentCount||0} sent${h.failedCount>0?` · ⚠️ ${h.failedCount} failed`:""}</span>
+          <span>${date}</span>
+        </div>
+      </div>`;
+    }).join("");
+  } catch(e){
+    list.innerHTML=`<div style="color:#ff6b6b;font-size:12px;">Error loading history.</div>`;
+  }
+}
+
+function populatePromoCodeDropdown(){
+  const sel = document.getElementById("promoExistingCode");
+  if(!sel) return;
+  const active = allDiscounts.filter(d=>d.active);
+  sel.innerHTML = `<option value="">— Select a code —</option>` +
+    active.map(d=>`<option value="${esc(d.code)}">${esc(d.code)} — ${d.pct}% off</option>`).join("");
+}
+
+/* ══ INIT ══ */
+(function(){
+  // Reveal page now that we've checked auth state
+  document.documentElement.style.visibility = '';
+  if(sessionStorage.getItem("sc_admin")==="1"){
+    showAdmin();
+  } else {
+    // Make sure admin content stays hidden and only login is shown
+    document.getElementById("adminWrap").style.display = "none";
+    document.getElementById("loginWrap").style.display = "flex";
+  }
+})();
+</script>
+</body>
+</html>
