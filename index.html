@@ -418,8 +418,22 @@
         </div>
         <div id="shipAddressWrap" style="display:none;margin-top:8px;">
           <div class="f-group">
-            <label style="font-size:12px;color:var(--muted);font-weight:850;">Shipping Address</label>
-            <input class="f-input" id="shipAddress" placeholder="Street, City, State, ZIP" style="font-size:13px;padding:10px 14px;" />
+            <label style="font-size:12px;color:var(--muted);font-weight:850;">Street Address <span style="color:var(--red);">*</span></label>
+            <input class="f-input" id="shipStreet" placeholder="123 Main St" style="font-size:13px;padding:10px 14px;" />
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:6px;">
+            <div class="f-group" style="margin:0;">
+              <label style="font-size:12px;color:var(--muted);font-weight:850;">City <span style="color:var(--red);">*</span></label>
+              <input class="f-input" id="shipCity" placeholder="City" style="font-size:13px;padding:10px 14px;" />
+            </div>
+            <div class="f-group" style="margin:0;">
+              <label style="font-size:12px;color:var(--muted);font-weight:850;">State <span style="color:var(--red);">*</span></label>
+              <input class="f-input" id="shipState" placeholder="IA" maxlength="2" style="font-size:13px;padding:10px 14px;text-transform:uppercase;" />
+            </div>
+            <div class="f-group" style="margin:0;">
+              <label style="font-size:12px;color:var(--muted);font-weight:850;">ZIP <span style="color:var(--red);">*</span></label>
+              <input class="f-input" id="shipZip" placeholder="50169" maxlength="10" style="font-size:13px;padding:10px 14px;" />
+            </div>
           </div>
         </div>
         <div class="divider"></div>
@@ -773,7 +787,18 @@ document.getElementById("loginBtn").addEventListener("click",async()=>{
   document.getElementById("orderName").value=res.user.name;
   document.getElementById("orderEmail").value=res.user.email;
   const savedAddr=await Auth.getShippingAddress(res.user.email);
-  if(savedAddr)document.getElementById("shipAddress").value=savedAddr;
+  if(savedAddr){
+      const parts=savedAddr.split(",");
+      if(parts.length>=3){
+        document.getElementById("shipStreet").value=parts[0].trim();
+        document.getElementById("shipCity").value=parts[1].trim();
+        const stateZip=(parts[2]||"").trim().split(" ");
+        document.getElementById("shipState").value=stateZip[0]||"";
+        document.getElementById("shipZip").value=stateZip[1]||"";
+      } else {
+        document.getElementById("shipStreet").value=savedAddr;
+      }
+    }
   toast(`Welcome back, ${res.user.name.split(" ")[0]}!`);
 });
 
@@ -819,7 +844,18 @@ document.getElementById("landingSignInBtn").addEventListener("click",async()=>{
   document.getElementById("orderName").value=res.user.name;
   document.getElementById("orderEmail").value=res.user.email;
   const savedAddr=await Auth.getShippingAddress(res.user.email);
-  if(savedAddr)document.getElementById("shipAddress").value=savedAddr;
+  if(savedAddr){
+      const parts=savedAddr.split(",");
+      if(parts.length>=3){
+        document.getElementById("shipStreet").value=parts[0].trim();
+        document.getElementById("shipCity").value=parts[1].trim();
+        const stateZip=(parts[2]||"").trim().split(" ");
+        document.getElementById("shipState").value=stateZip[0]||"";
+        document.getElementById("shipZip").value=stateZip[1]||"";
+      } else {
+        document.getElementById("shipStreet").value=savedAddr;
+      }
+    }
   enterCatalog();
 });
 
@@ -884,7 +920,18 @@ document.getElementById("saveAddressBtn").addEventListener("click",async()=>{
   const user=getSession();if(!user)return;
   const addr=document.getElementById("acctShipAddress").value.trim();
   await Auth.saveShippingAddress(user.email,addr);
-  document.getElementById("shipAddress").value=addr;
+  if(addr){
+    const parts=addr.split(",");
+    if(parts.length>=3){
+      document.getElementById("shipStreet").value=parts[0].trim();
+      document.getElementById("shipCity").value=parts[1].trim();
+      const stateZip=(parts[2]||"").trim().split(" ");
+      document.getElementById("shipState").value=stateZip[0]||"";
+      document.getElementById("shipZip").value=stateZip[1]||"";
+    } else {
+      document.getElementById("shipStreet").value=addr;
+    }
+  }
   const msg=document.getElementById("addressMsg");
   msg.style.color="#4ade80";msg.textContent=addr?"✅ Address saved!":"Address cleared.";
   setTimeout(()=>msg.textContent="",2500);
@@ -907,14 +954,18 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   const email=document.getElementById("orderEmail").value.trim();
   const phone=document.getElementById("orderPhone").value.trim();
   const notes=document.getElementById("orderNotes").value.trim();
-  const addr=document.getElementById("shipAddress").value.trim();
+  const shipStreet=(document.getElementById("shipStreet")||{}).value?.trim()||"";
+  const shipCity=(document.getElementById("shipCity")||{}).value?.trim()||"";
+  const shipState=(document.getElementById("shipState")||{}).value?.trim().toUpperCase()||"";
+  const shipZip=(document.getElementById("shipZip")||{}).value?.trim()||"";
+  const addr=shipStreet&&shipCity&&shipState&&shipZip?`${shipStreet}, ${shipCity}, ${shipState} ${shipZip}`:"";
   const statusEl=document.getElementById("orderStatus");
 
   if(!name||!email){statusEl.className="order-status error";statusEl.textContent="Please enter your name and email.";return;}
   if(!phone){statusEl.className="order-status error";statusEl.textContent="Please enter your phone number.";return;}
   if(!state.paymentMethod){statusEl.className="order-status error";statusEl.textContent="Please select a payment method.";return;}
   if(state.cart.size===0){statusEl.className="order-status error";statusEl.textContent="Your cart is empty.";return;}
-  if(state.fulfillment==="ship"&&!addr){statusEl.className="order-status error";statusEl.textContent="Please enter a shipping address.";return;}
+  if(state.fulfillment==="ship"&&(!shipStreet||!shipCity||!shipState||!shipZip)){statusEl.className="order-status error";statusEl.textContent="Please fill in all shipping address fields (Street, City, State, ZIP).";return;}
 
   const t=computeTotals();
   const cartLines=[...state.cart.values()].map(it=>`${it.name} (${it.strength}) x${it.qty} = ${money(it.unitPrice*it.qty)}`).join("\n");
@@ -1219,7 +1270,18 @@ async function init(){
     document.getElementById("orderName").value=user.name;
     document.getElementById("orderEmail").value=user.email;
     const savedAddr=await Auth.getShippingAddress(user.email);
-    if(savedAddr)document.getElementById("shipAddress").value=savedAddr;
+    if(savedAddr){
+      const parts=savedAddr.split(",");
+      if(parts.length>=3){
+        document.getElementById("shipStreet").value=parts[0].trim();
+        document.getElementById("shipCity").value=parts[1].trim();
+        const stateZip=(parts[2]||"").trim().split(" ");
+        document.getElementById("shipState").value=stateZip[0]||"";
+        document.getElementById("shipZip").value=stateZip[1]||"";
+      } else {
+        document.getElementById("shipStreet").value=savedAddr;
+      }
+    }
   } else {
     document.getElementById("landingPage").classList.remove("hidden");
     document.body.style.overflow="hidden";
