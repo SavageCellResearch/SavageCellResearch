@@ -1208,8 +1208,17 @@ async function applyDiscountCode(){
     // Check active
     if(!data.active){ msg.style.color="#ff6b6b"; msg.textContent="This code is no longer active."; return; }
 
+    // Check start date
+    if(data.startDate && new Date(data.startDate) > new Date()){ msg.style.color="#ff6b6b"; msg.textContent=`This code is not valid until ${data.startDate}.`; return; }
+
     // Check expiry
     if(data.expiresAt && new Date(data.expiresAt) < new Date()){ msg.style.color="#ff6b6b"; msg.textContent="This code has expired."; return; }
+
+    // Check minimum order
+    if(data.minOrder){
+      const subtotal = state.cart.reduce((sum,item)=>sum+(item.price*item.qty),0);
+      if(subtotal < data.minOrder){ msg.style.color="#ff6b6b"; msg.textContent=`This code requires a minimum order of $${data.minOrder.toFixed(2)}.`; return; }
+    }
 
     // Check use limit
     if(data.useLimit && data.usedCount>=data.useLimit){ msg.style.color="#ff6b6b"; msg.textContent="This code has reached its use limit."; return; }
