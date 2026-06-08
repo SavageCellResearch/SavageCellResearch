@@ -243,7 +243,7 @@
       <!-- Create new code -->
       <div style="border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;margin-bottom:20px;background:rgba(255,255,255,.02);">
         <div style="font-size:13px;font-weight:980;margin-bottom:12px;letter-spacing:.05em;">➕ Create New Code</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
           <div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Code</div>
             <input class="inline-input" id="newCode" placeholder="e.g. SAVE10" style="width:100%;text-transform:uppercase;" maxlength="20" />
@@ -253,17 +253,30 @@
             <input class="inline-input" id="newPct" type="number" placeholder="10" min="1" max="100" style="width:100%;" />
           </div>
           <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Expires (optional)</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Min. Order $ (optional)</div>
+            <input class="inline-input" id="newMinOrder" type="number" placeholder="e.g. 250" min="0" style="width:100%;" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Start Date (optional)</div>
+            <input class="inline-input" id="newStartDate" type="date" style="width:100%;color-scheme:dark;" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">End Date (optional)</div>
             <input class="inline-input" id="newExpiry" type="date" style="width:100%;color-scheme:dark;" />
           </div>
           <div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">Use Limit (optional)</div>
             <input class="inline-input" id="newLimit" type="number" placeholder="∞" min="1" style="width:100%;" />
           </div>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;">&nbsp;</div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;padding:8px 0;">
               <input type="checkbox" id="newSingleUse" style="accent-color:var(--red);" /> Single use
             </label>
+          </div>
+          <div style="display:flex;flex-direction:column;justify-content:flex-end;">
             <button class="btn success" onclick="createDiscount()" style="white-space:nowrap;">✅ Create</button>
           </div>
         </div>
@@ -276,7 +289,9 @@
             <tr>
               <th>Code</th>
               <th>% Off</th>
-              <th>Expires</th>
+              <th>Min. Order</th>
+              <th>Start Date</th>
+              <th>End Date</th>
               <th>Use Limit</th>
               <th>Used</th>
               <th>Single Use</th>
@@ -285,7 +300,7 @@
             </tr>
           </thead>
           <tbody id="discountsBody">
-            <tr><td colspan="8" class="loading">Loading…</td></tr>
+            <tr><td colspan="10" class="loading">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -1205,23 +1220,25 @@ function switchTab(name){
 let allDiscounts = [];
 
 async function loadDiscounts(){
-  document.getElementById("discountsBody").innerHTML = `<tr><td colspan="8" class="loading">Loading…</td></tr>`;
+  document.getElementById("discountsBody").innerHTML = `<tr><td colspan="10" class="loading">Loading…</td></tr>`;
   try{
     const snap = await db.collection("discountCodes").orderBy("createdAt","desc").get();
     allDiscounts = snap.docs.map(d => ({id:d.id, ...d.data()}));
     renderDiscounts();
   }catch(e){
-    document.getElementById("discountsBody").innerHTML = `<tr><td colspan="8" class="empty-state">Error loading codes.</td></tr>`;
+    document.getElementById("discountsBody").innerHTML = `<tr><td colspan="10" class="empty-state">Error loading codes.</td></tr>`;
   }
 }
 
 function renderDiscounts(){
   const tbody = document.getElementById("discountsBody");
-  if(!allDiscounts.length){ tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No discount codes yet.</td></tr>`; return; }
+  if(!allDiscounts.length){ tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No discount codes yet.</td></tr>`; return; }
   tbody.innerHTML = allDiscounts.map(d => `
     <tr>
       <td style="font-weight:980;font-family:monospace;letter-spacing:.1em;">${esc(d.code)}</td>
       <td style="font-weight:900;color:#4ade80;">${d.pct}%</td>
+      <td style="font-size:12px;">${d.minOrder?`$${d.minOrder}`:"—"}</td>
+      <td style="font-size:12px;color:var(--muted);">${d.startDate||"—"}</td>
       <td style="font-size:12px;color:var(--muted);">${d.expiresAt||"—"}</td>
       <td style="font-size:12px;">${d.useLimit||"∞"}</td>
       <td style="font-size:12px;">${d.usedCount||0}</td>
@@ -1255,9 +1272,14 @@ async function createDiscount(){
     const existing = await db.collection("discountCodes").where("code","==",code).get();
     if(!existing.empty){ msg.style.color="#ff6b6b"; msg.textContent="Code already exists."; return; }
 
+    const startDate = document.getElementById("newStartDate").value||null;
+    const minOrder = document.getElementById("newMinOrder").value ? Number(document.getElementById("newMinOrder").value) : null;
+
     await db.collection("discountCodes").add({
       code, pct,
+      startDate: startDate||null,
       expiresAt: expiry||null,
+      minOrder: minOrder||null,
       useLimit: limit?Number(limit):null,
       usedCount: 0,
       singleUse,
@@ -1269,7 +1291,9 @@ async function createDiscount(){
     msg.style.color="#4ade80"; msg.textContent=`✅ Code "${code}" created!`;
     document.getElementById("newCode").value="";
     document.getElementById("newPct").value="";
+    document.getElementById("newStartDate").value="";
     document.getElementById("newExpiry").value="";
+    document.getElementById("newMinOrder").value="";
     document.getElementById("newLimit").value="";
     document.getElementById("newSingleUse").checked=false;
     await loadDiscounts();
@@ -1431,7 +1455,11 @@ async function sendPromoEmail(){
     if(!existing.empty){ msg.style.color="#ff6b6b"; msg.textContent=`Code "${code}" already exists. Pick a different name.`; return; }
     const expiry = document.getElementById("promoNewExpiry").value||null;
     await db.collection("discountCodes").add({
-      code, pct: Number(pct), expiresAt: expiry, useLimit: null,
+      code, pct: Number(pct),
+      startDate: document.getElementById("promoNewExpiry").value||null,
+      expiresAt: document.getElementById("promoNewExpiry").value||null,
+      minOrder: null,
+      useLimit: null,
       usedCount: 0, singleUse: false, usedBy: [], active: true,
       createdAt: new Date().toISOString()
     });
