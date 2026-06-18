@@ -491,10 +491,23 @@
               </select>
             </div>
             <div id="promoCodeNewWrap" style="display:none;">
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
                 <input class="inline-input" id="promoNewCode" placeholder="Code (e.g. JUNE20)" style="text-transform:uppercase;" maxlength="20" />
                 <input class="inline-input" id="promoNewPct" type="number" placeholder="% Off" min="1" max="100" />
-                <input class="inline-input" id="promoNewExpiry" type="date" style="color-scheme:dark;" />
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                <div>
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em;">Start Date</div>
+                  <input class="inline-input" id="promoNewStartDate" type="date" style="color-scheme:dark;width:100%;" />
+                </div>
+                <div>
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em;">End Date</div>
+                  <input class="inline-input" id="promoNewExpiry" type="date" style="color-scheme:dark;width:100%;" />
+                </div>
+                <div>
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em;">Min. Order $</div>
+                  <input class="inline-input" id="promoNewMinOrder" type="number" placeholder="optional" min="0" style="width:100%;" />
+                </div>
               </div>
               <div id="promoNewCodeMsg" style="font-size:11px;min-height:14px;margin-top:4px;"></div>
             </div>
@@ -1454,11 +1467,13 @@ async function sendPromoEmail(){
     const existing = await db.collection("discountCodes").where("code","==",code).get();
     if(!existing.empty){ msg.style.color="#ff6b6b"; msg.textContent=`Code "${code}" already exists. Pick a different name.`; return; }
     const expiry = document.getElementById("promoNewExpiry").value||null;
+    const startDate = document.getElementById("promoNewStartDate").value||null;
+    const minOrderVal = document.getElementById("promoNewMinOrder").value;
     await db.collection("discountCodes").add({
       code, pct: Number(pct),
-      startDate: document.getElementById("promoNewExpiry").value||null,
-      expiresAt: document.getElementById("promoNewExpiry").value||null,
-      minOrder: null,
+      startDate: startDate||null,
+      expiresAt: expiry||null,
+      minOrder: minOrderVal ? Number(minOrderVal) : null,
       useLimit: null,
       usedCount: 0, singleUse: false, usedBy: [], active: true,
       createdAt: new Date().toISOString()
@@ -1466,6 +1481,8 @@ async function sendPromoEmail(){
     await loadDiscounts(); // sync to Discount Codes tab
     document.getElementById("promoNewCodeMsg").style.color="#4ade80";
     document.getElementById("promoNewCodeMsg").textContent=`✅ Code "${code}" created and synced!`;
+    document.getElementById("promoNewStartDate").value="";
+    document.getElementById("promoNewMinOrder").value="";
   }
 
   // Build recipient list
