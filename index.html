@@ -451,6 +451,17 @@
           ⚠️ <strong style="color:#fff;">Important:</strong> When sending payment through your selected app, do <strong style="color:#fff;">not</strong> include product names in the payment note or memo field.
         </div>
         <div class="divider"></div>
+        <div id="promoSelectorWrap" style="display:none;margin-bottom:10px;padding:12px;border-radius:12px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.25);">
+          <b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;display:block;margin-bottom:8px;">🎉 You qualify for 2 offers — pick one</b>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;margin-bottom:6px;">
+            <input type="radio" name="promoChoice" id="promoChoiceFirst" style="accent-color:#4ade80;" />
+            <span>First Order — 10% Off</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;">
+            <input type="radio" name="promoChoice" id="promoChoiceCode" style="accent-color:#4ade80;" />
+            <span id="promoChoiceCodeLabel">Code Applied</span>
+          </label>
+        </div>
         <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Discount Code</b>
         <div class="discount-row">
           <input class="discount-input" id="discountInput" placeholder="Enter code (optional)" maxlength="20" />
@@ -716,7 +727,7 @@ const ITEMS=[
   {id:"kitfull",name:"Water + syr + wipes + recon",cat:"kits",variants:[{strength:"kit",price:35}]},
 ];
 
-const state={cat:"all",q:"",sort:"featured",sectionView:false,detail:null,cart:new Map(),fulfillment:"pickup",paymentMethod:"",appliedCodes:[],firstOrderDiscount:false};
+const state={cat:"all",q:"",sort:"featured",sectionView:false,detail:null,cart:new Map(),fulfillment:"pickup",paymentMethod:"",appliedCodes:[],firstOrderDiscount:false,activePromo:null};
 const money=(n)=>`$${Number(n).toFixed(2)}`;
 const esc=(s)=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>el.style.display="none",1400);}
@@ -1008,6 +1019,7 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   }
   state.appliedCodes=[];
   state.firstOrderDiscount=false;
+  state.activePromo=null;
 
   statusEl.className="order-status success";statusEl.textContent="✅ Order received! You will receive a confirmation email shortly with payment instructions and pickup or delivery details.";
   state.cart.clear();await persistCart();renderCart();toast("Order submitted!");
@@ -1087,16 +1099,22 @@ function computeDiscounts(){
   const items=[...state.cart.values()];
   const discounts=[];
 
-  // 1. First order discount 10%
-  if(state.firstOrderDiscount){
+  // 1. First order discount 10% — only if no code applied, or explicitly chosen over a code
+  const hasCode = state.appliedCodes.length>0;
+  const hasFirstOrder = state.firstOrderDiscount;
+  const bothAvailable = hasCode && hasFirstOrder;
+
+  if(hasFirstOrder && (!bothAvailable || state.activePromo==="first")){
     const subtotal=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
     discounts.push({label:"First Order 10% Off",amount:subtotal*0.10,type:"firstorder"});
   }
 
-  // 2. Code-based discounts
-  for(const code of state.appliedCodes){
-    const subtotal=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
-    discounts.push({label:`Code "${code.code}" ${code.pct}% Off`,amount:subtotal*(code.pct/100),type:"code",code:code.code});
+  // 2. Code-based discounts — only if no first-order available, or explicitly chosen over first-order
+  if(hasCode && (!bothAvailable || state.activePromo==="code")){
+    for(const code of state.appliedCodes){
+      const subtotal=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
+      discounts.push({label:`Code "${code.code}" ${code.pct}% Off`,amount:subtotal*(code.pct/100),type:"code",code:code.code});
+    }
   }
 
   // 3. Vial bulk discounts — only injectable cats
@@ -1176,7 +1194,30 @@ function renderCart(){
   }
   const badge=document.getElementById("cartBadge");
   if(t.count>0){badge.textContent=t.count;badge.classList.remove("hidden");}else{badge.classList.add("hidden");}
+  updatePromoSelector();
 }
+
+function updatePromoSelector(){
+  const wrap=document.getElementById("promoSelectorWrap");
+  const hasCode=state.appliedCodes.length>0;
+  const hasFirstOrder=state.firstOrderDiscount;
+  if(hasCode && hasFirstOrder){
+    wrap.style.display="block";
+    const codeLabel=document.getElementById("promoChoiceCodeLabel");
+    const codeNames=state.appliedCodes.map(c=>`"${c.code}" ${c.pct}% Off`).join(", ");
+    codeLabel.textContent=codeNames;
+    // Default to code if nothing chosen yet
+    if(!state.activePromo) state.activePromo="code";
+    document.getElementById("promoChoiceFirst").checked = state.activePromo==="first";
+    document.getElementById("promoChoiceCode").checked = state.activePromo==="code";
+  } else {
+    wrap.style.display="none";
+    if(!hasCode && !hasFirstOrder) state.activePromo=null;
+  }
+}
+
+document.getElementById("promoChoiceFirst").addEventListener("change",()=>{ state.activePromo="first"; renderCart(); });
+document.getElementById("promoChoiceCode").addEventListener("change",()=>{ state.activePromo="code"; renderCart(); });
 
 
 /* ══ DISCOUNT CODES ══ */
@@ -1230,7 +1271,11 @@ async function applyDiscountCode(){
     }
 
     state.appliedCodes.push({code, pct:data.pct, docId:doc.id});
-    msg.style.color="#4ade80"; msg.textContent=`✅ Code applied: ${data.pct}% off!`;
+    if(state.firstOrderDiscount){
+      msg.style.color="#4ade80"; msg.textContent=`✅ Code applied: ${data.pct}% off! You can choose between this and your first-order discount below.`;
+    } else {
+      msg.style.color="#4ade80"; msg.textContent=`✅ Code applied: ${data.pct}% off!`;
+    }
     input.value="";
     renderCart();
   }catch(e){ msg.style.color="#ff6b6b"; msg.textContent="Error checking code. Try again."; }
