@@ -1269,7 +1269,7 @@ async function applyDiscountCode(){
 
     // Check minimum order
     if(data.minOrder){
-      const subtotal = state.cart.reduce((sum,item)=>sum+(item.price*item.qty),0);
+      const subtotal = [...state.cart.values()].reduce((sum,item)=>sum+(item.unitPrice*item.qty),0);
       if(subtotal < data.minOrder){ msg.style.color="#ff6b6b"; msg.textContent=`This code requires a minimum order of $${data.minOrder.toFixed(2)}.`; return; }
     }
 
