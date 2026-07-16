@@ -419,6 +419,7 @@
           </div>
           <div class="totals">
             <div class="tile"><b>Subtotal</b><div class="val" id="subTotal">$0.00</div><div class="sub" id="subMeta">—</div></div>
+            <div class="tile" id="ccFeeTile" style="display:none;"><b style="color:#fbbf24;">CC Fee (3%)</b><div class="val" id="ccFeeEl" style="color:#fbbf24;">$0.00</div><div class="sub">Processing</div></div>
             <div class="tile"><b>Total</b><div class="val" id="grandTotal">$0.00</div><div class="sub" id="totalSub">—</div></div>
           </div>
         </div>
@@ -458,9 +459,13 @@
           <button class="f-toggle-btn" data-active="false" data-method="Bitcoin" onclick="setPayment(this)">₿ Bitcoin</button>
           <button class="f-toggle-btn" data-active="false" data-method="USDC" onclick="setPayment(this)">🔷 USDC</button>
           <button class="f-toggle-btn" data-active="false" data-method="Cash" onclick="setPayment(this)" id="cashBtn">💵 Cash</button>
+          <button class="f-toggle-btn" data-active="false" data-method="Credit Card" onclick="setPayment(this)" style="grid-column:span 2;">💳 Credit Card <span style="font-size:11px;opacity:.7;">(+3% processing fee)</span></button>
         </div>
         <div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(208,21,31,.10);border:1px solid rgba(208,21,31,.35);font-size:12px;color:rgba(242,242,242,.85);line-height:1.5;">
           ⚠️ <strong style="color:#fff;">Important:</strong> When sending payment through your selected app, do <strong style="color:#fff;">not</strong> include product names in the payment note or memo field.
+        </div>
+        <div id="ccPayNotice" style="display:none;margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);font-size:12px;color:rgba(242,242,242,.85);line-height:1.5;">
+          💳 A secure payment link will be sent to your email after submitting your order. A 3% processing fee has been added to your total.
         </div>
         <div class="divider"></div>
         <div id="promoSelectorWrap" style="display:none;margin-bottom:10px;padding:12px;border-radius:12px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.25);">
@@ -776,6 +781,9 @@ function setPayment(btn){
   document.querySelectorAll("[data-method]").forEach(b=>b.dataset.active="false");
   btn.dataset.active="true";
   state.paymentMethod=btn.dataset.method;
+  const ccNotice=document.getElementById("ccPayNotice");
+  if(ccNotice) ccNotice.style.display=state.paymentMethod==="Credit Card"?"block":"none";
+  renderCart();
 }
 
 /* ══ AUTH UI ══ */
@@ -1169,8 +1177,10 @@ function computeTotals(){
   const shipping=state.fulfillment==="ship"?15:0;
   const discounts=computeDiscounts();
   const totalDiscount=discounts.reduce((a,d)=>a+d.amount,0);
-  const total=Math.max(0,subtotal-totalDiscount)+shipping;
-  return{subtotal,shipping,totalDiscount,discounts,total,count:items.reduce((a,x)=>a+x.qty,0),lines:items.length};
+  const afterDiscounts=Math.max(0,subtotal-totalDiscount)+shipping;
+  const ccFee=state.paymentMethod==="Credit Card"?parseFloat((afterDiscounts*0.03).toFixed(2)):0;
+  const total=afterDiscounts+ccFee;
+  return{subtotal,shipping,totalDiscount,discounts,ccFee,total,count:items.reduce((a,x)=>a+x.qty,0),lines:items.length};
 }
 
 function renderCart(){
@@ -1192,7 +1202,19 @@ function renderCart(){
     let subs=[];
     if(t.shipping>0) subs.push("Incl. $15 shipping");
     if(t.totalDiscount>0) subs.push(`-${money(t.totalDiscount)} discounts`);
+    if(t.ccFee>0) subs.push(`+${money(t.ccFee)} CC fee`);
     totalSubEl.textContent=subs.join(" · ")||"—";
+  }
+  // CC fee tile
+  const ccFeeTile=document.getElementById("ccFeeTile");
+  const ccFeeEl=document.getElementById("ccFeeEl");
+  if(ccFeeTile){
+    if(t.ccFee>0){
+      ccFeeTile.style.display="";
+      ccFeeEl.textContent=`+${money(t.ccFee)}`;
+    } else {
+      ccFeeTile.style.display="none";
+    }
   }
   // Discount lines
   const dlEl=document.getElementById("discountLines");
