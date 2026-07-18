@@ -312,7 +312,14 @@
       <div class="f-group"><label>Password</label><div class="pw-wrap"><input class="f-input" type="password" id="loginPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('loginPass',this)">👁</button></div></div>
       <button class="btn-full" id="loginBtn">Sign In</button>
       <div class="overlay-err" id="loginErr"></div>
-      <div class="overlay-link">No account? <a id="toSignup">Create one</a></div>
+      <div class="overlay-link">No account? <a id="toSignup">Create one</a> · <a id="toForgot" style="cursor:pointer;">Forgot password?</a></div>
+    </div>
+    <div id="forgotForm" style="display:none;">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Enter your email and we'll send you a temporary password.</p>
+      <div class="f-group"><label>Email</label><input class="f-input" type="email" id="forgotEmail" placeholder="you@example.com" /></div>
+      <button class="btn-full" id="forgotBtn">Send Temporary Password</button>
+      <div class="overlay-err" id="forgotMsg" style="margin-top:8px;"></div>
+      <div class="overlay-link"><a id="backToLogin" style="cursor:pointer;">← Back to Sign In</a></div>
     </div>
     <div id="signupForm" style="display:none">
       <div class="f-group"><label>Full Name</label><input class="f-input" type="text" id="signupName" placeholder="Your name" /></div>
@@ -800,11 +807,81 @@ document.getElementById("authBtn").addEventListener("click",async()=>{
   } else { showLogin(); }
 });
 
-function showLogin(){document.getElementById("loginForm").style.display="block";document.getElementById("signupForm").style.display="none";document.getElementById("authTitle").textContent="Welcome Back";document.getElementById("authSub").textContent="Sign in to your SavageCell account.";document.getElementById("loginErr").textContent="";document.getElementById("loginOverlay").classList.remove("hidden");}
+function showLogin(){
+  document.getElementById("loginForm").style.display="block";
+  document.getElementById("signupForm").style.display="none";
+  document.getElementById("forgotForm").style.display="none";
+  document.getElementById("authTitle").textContent="Welcome Back";
+  document.getElementById("authSub").textContent="Sign in to your SavageCell account.";
+  document.getElementById("loginErr").textContent="";
+  document.getElementById("loginOverlay").classList.remove("hidden");
+}
+function showForgot(){
+  document.getElementById("loginForm").style.display="none";
+  document.getElementById("signupForm").style.display="none";
+  document.getElementById("forgotForm").style.display="block";
+  document.getElementById("authTitle").textContent="Reset Password";
+  document.getElementById("authSub").textContent="We'll email you a temporary password.";
+  document.getElementById("forgotMsg").textContent="";
+  document.getElementById("forgotEmail").value="";
+}
 function showSignup(){document.getElementById("loginForm").style.display="none";document.getElementById("signupForm").style.display="block";document.getElementById("authTitle").textContent="Create Account";document.getElementById("authSub").textContent="Join SavageCell Research.";document.getElementById("signupErr").textContent="";document.getElementById("loginOverlay").classList.remove("hidden");}
 function closeAuthOverlay(){document.getElementById("loginOverlay").classList.add("hidden");}
 document.getElementById("toSignup").addEventListener("click",showSignup);
 document.getElementById("toLogin").addEventListener("click",showLogin);
+document.getElementById("toForgot").addEventListener("click",showForgot);
+document.getElementById("backToLogin").addEventListener("click",showLogin);
+
+document.getElementById("forgotBtn").addEventListener("click", async()=>{
+  const email = document.getElementById("forgotEmail").value.trim().toLowerCase();
+  const msg = document.getElementById("forgotMsg");
+  const btn = document.getElementById("forgotBtn");
+  if(!email){ msg.style.color="#ff6b6b"; msg.textContent="Please enter your email address."; return; }
+
+  btn.disabled=true; btn.textContent="Sending…";
+  msg.style.color="var(--muted)"; msg.textContent="";
+
+  try{
+    // Check if account exists
+    const snap = await db.collection("users").where("email","==",email).limit(1).get();
+    if(snap.empty){
+      // Don't reveal if email exists — show same message either way for security
+      msg.style.color="#4ade80";
+      msg.textContent="If an account exists for that email, a temporary password has been sent.";
+      btn.disabled=false; btn.textContent="Send Temporary Password";
+      return;
+    }
+
+    // Generate a random temporary password
+    const chars="ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let tempPass="";
+    for(let i=0;i<10;i++) tempPass+=chars[Math.floor(Math.random()*chars.length)];
+
+    // Save temp password to Firestore
+    const docId = snap.docs[0].id;
+    const userData = snap.docs[0].data();
+    await db.collection("users").doc(docId).update({
+      password: tempPass,
+      tempPassword: true,
+      tempPasswordSetAt: new Date().toISOString()
+    });
+
+    // Send email via worker
+    await sendWorkerEmail("resetPassword", {
+      customerName: userData.name || "Member",
+      customerEmail: email,
+      tempPassword: tempPass
+    });
+
+    msg.style.color="#4ade80";
+    msg.textContent="If an account exists for that email, a temporary password has been sent.";
+  } catch(e){
+    msg.style.color="#ff6b6b";
+    msg.textContent="Something went wrong. Please try again.";
+  }
+
+  btn.disabled=false; btn.textContent="Send Temporary Password";
+});
 
 document.getElementById("loginBtn").addEventListener("click",async()=>{
   const email=document.getElementById("loginEmail").value.trim(),pass=document.getElementById("loginPass").value;
@@ -813,6 +890,22 @@ document.getElementById("loginBtn").addEventListener("click",async()=>{
   btn.disabled=false; btn.textContent="Sign In";
   if(!res.ok){document.getElementById("loginErr").textContent=res.err;return;}
   closeAuthOverlay();
+  // If temp password, prompt to change immediately
+  if(res.user && res.user.tempPassword){
+    setTimeout(async()=>{
+      const newPw=prompt("You\'re using a temporary password.\nPlease set a new password now (min 6 characters):");
+      if(newPw && newPw.length>=6){
+        const r=await Auth.changePassword(res.user.email, res.user.password, newPw);
+        if(r.ok){
+          const s=await db.collection("users").where("email","==",res.user.email).limit(1).get();
+          if(!s.empty) s.docs[0].ref.update({tempPassword:false,password:newPw});
+          alert("✅ Password updated! You\'re all set.");
+        }
+      } else if(newPw!==null){
+        alert("Password must be at least 6 characters. You can update it anytime in Account Settings.");
+      }
+    },600);
+  }
   const saved=await Auth.loadCart(res.user.email);
   if(saved.length){cartFromArray(saved);renderCart();}
   updateAuthBtn();
