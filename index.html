@@ -282,6 +282,14 @@
           <div class="f-group"><label>Password</label><div class="pw-wrap"><input class="f-input" type="password" id="landingPass" placeholder="••••••••" /><button type="button" class="pw-eye" onclick="togglePw('landingPass',this)">👁</button></div></div>
           <button class="btn-full" id="landingSignInBtn">Sign In →</button>
           <div class="overlay-err" id="landingSignInErr"></div>
+          <div style="text-align:center;margin-top:8px;"><a id="landingForgotLink" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;">Forgot password?</a></div>
+        </div>
+        <div id="landingForgotForm" style="display:none;">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Enter your email and we'll send you a temporary password.</p>
+          <div class="f-group"><label>Email</label><input class="f-input" type="email" id="landingForgotEmail" placeholder="you@example.com" /></div>
+          <button class="btn-full" id="landingForgotBtn">Send Temporary Password</button>
+          <div class="overlay-err" id="landingForgotMsg" style="margin-top:8px;"></div>
+          <div style="text-align:center;margin-top:8px;"><a id="landingBackToLogin" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;">← Back to Sign In</a></div>
         </div>
         <div id="landingSignUp" style="display:none">
           <div class="f-group"><label>Full Name</label><input class="f-input" type="text" id="landingName" placeholder="Your name" /></div>
@@ -951,6 +959,7 @@ function switchLandingTab(tab){
   document.getElementById("tabSignIn").classList.toggle("active",tab==="signin");
   document.getElementById("tabSignUp").classList.toggle("active",tab==="signup");
   document.getElementById("landingSignIn").style.display=tab==="signin"?"block":"none";
+  document.getElementById("landingForgotForm").style.display="none";
   document.getElementById("landingSignUp").style.display=tab==="signup"?"block":"none";
   document.getElementById("landingSignInErr").textContent="";
   document.getElementById("landingSignUpErr").textContent="";
@@ -998,6 +1007,46 @@ document.getElementById("landingSignUpBtn").addEventListener("click",async()=>{
 });
 
 ["landingEmail","landingPass"].forEach(id=>{document.getElementById(id).addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("landingSignInBtn").click();});});
+
+document.getElementById("landingForgotLink").addEventListener("click",()=>{
+  document.getElementById("landingSignIn").style.display="none";
+  document.getElementById("landingForgotForm").style.display="block";
+  document.getElementById("landingForgotMsg").textContent="";
+  document.getElementById("landingForgotEmail").value="";
+});
+
+document.getElementById("landingBackToLogin").addEventListener("click",()=>{
+  document.getElementById("landingForgotForm").style.display="none";
+  document.getElementById("landingSignIn").style.display="block";
+});
+
+document.getElementById("landingForgotBtn").addEventListener("click", async()=>{
+  const email=document.getElementById("landingForgotEmail").value.trim().toLowerCase();
+  const msg=document.getElementById("landingForgotMsg");
+  const btn=document.getElementById("landingForgotBtn");
+  if(!email){ msg.style.color="#ff6b6b"; msg.textContent="Please enter your email address."; return; }
+
+  btn.disabled=true; btn.textContent="Sending…";
+  msg.style.color="var(--muted)"; msg.textContent="";
+
+  try{
+    const snap=await db.collection("users").where("email","==",email).limit(1).get();
+    if(!snap.empty){
+      const chars="ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+      let tempPass="";
+      for(let i=0;i<10;i++) tempPass+=chars[Math.floor(Math.random()*chars.length)];
+      const userData=snap.docs[0].data();
+      await snap.docs[0].ref.update({password:tempPass,tempPassword:true,tempPasswordSetAt:new Date().toISOString()});
+      await sendWorkerEmail("resetPassword",{customerName:userData.name||"Member",customerEmail:email,tempPassword:tempPass});
+    }
+    msg.style.color="#4ade80";
+    msg.textContent="If an account exists for that email, a temporary password has been sent.";
+  } catch(e){
+    msg.style.color="#ff6b6b";
+    msg.textContent="Something went wrong. Please try again.";
+  }
+  btn.disabled=false; btn.textContent="Send Temporary Password";
+});
 ["landingName","landingSignUpEmail","landingSignUpPass"].forEach(id=>{document.getElementById(id).addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("landingSignUpBtn").click();});});
 
 /* ══ ORDER HISTORY ══ */
