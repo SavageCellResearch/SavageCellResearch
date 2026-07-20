@@ -902,10 +902,10 @@ document.getElementById("forgotBtn").addEventListener("click", async()=>{
     });
 
     // Send email via worker
-    await sendWorkerEmail("resetPassword", {
-      customerName: userData.name || "Member",
-      customerEmail: email,
-      tempPassword: tempPass
+    await fetch("https://savagecell-mailer.jasminegalanon.workers.dev", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({type:"resetPassword",data:{customerName:userData.name||"Member",customerEmail:email,tempPassword:tempPass}})
     });
 
     msg.style.color="#4ade80";
@@ -1064,7 +1064,11 @@ document.getElementById("landingForgotBtn").addEventListener("click", async()=>{
       for(let i=0;i<10;i++) tempPass+=chars[Math.floor(Math.random()*chars.length)];
       const userData=snap.docs[0].data();
       await snap.docs[0].ref.update({password:tempPass,tempPassword:true,tempPasswordSetAt:new Date().toISOString()});
-      await sendWorkerEmail("resetPassword",{customerName:userData.name||"Member",customerEmail:email,tempPassword:tempPass});
+      await fetch("https://savagecell-mailer.jasminegalanon.workers.dev", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({type:"resetPassword",data:{customerName:userData.name||"Member",customerEmail:email,tempPassword:tempPass}})
+      });
     }
     msg.style.color="#4ade80";
     msg.textContent="If an account exists for that email, a temporary password has been sent.";
