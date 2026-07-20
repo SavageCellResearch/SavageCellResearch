@@ -651,7 +651,7 @@ const Auth = {
       if(!doc.exists) return{ok:false,err:"No account found with that email."};
       const data = doc.data();
       if(data.password!==password) return{ok:false,err:"Incorrect password."};
-      const user = {name:data.name, email:key};
+      const user = {name:data.name, email:key, tempPassword:data.tempPassword||false, password:data.password};
       setSession(user);
       return{ok:true,user,data};
     }catch(e){ return{ok:false,err:"Login failed. Please try again."}; }
@@ -1018,6 +1018,25 @@ document.getElementById("landingSignInBtn").addEventListener("click",async()=>{
       }
     }
   enterCatalog();
+  // If temp password, prompt to change immediately
+  if(res.user && res.user.tempPassword){
+    setTimeout(async()=>{
+      const newPw=prompt("You're using a temporary password.\nPlease set a new password now (min 6 characters):");
+      if(newPw && newPw.length>=6){
+        const r=await Auth.changePassword(res.user.email, res.user.password, newPw);
+        if(r.ok){
+          const s=await db.collection("users").doc(res.user.email.toLowerCase().trim()).get();
+          if(s.exists) await db.collection("users").doc(res.user.email.toLowerCase().trim()).update({tempPassword:false,password:newPw});
+          // Update session to remove temp flag
+          const updatedUser={...res.user, tempPassword:false, password:newPw};
+          setSession(updatedUser);
+          alert("✅ Password updated! You're all set.");
+        }
+      } else if(newPw!==null){
+        alert("Password must be at least 6 characters. You can update it anytime in Account Settings.");
+      }
+    },800);
+  }
 });
 
 document.getElementById("landingSignUpBtn").addEventListener("click",async()=>{
