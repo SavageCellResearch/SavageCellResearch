@@ -581,6 +581,14 @@
           <div style="font-size:12px;min-height:16px;" id="passMsg"></div>
         </div>
         <div class="divider"></div>
+        <b style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">Update Email</b>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+          <input class="f-input" type="email" id="acctNewEmail" placeholder="New email address" style="font-size:13px;padding:10px 14px;" />
+          <div class="pw-wrap"><input class="f-input" type="password" id="acctEmailPass" placeholder="Current password to confirm" style="font-size:13px;padding:10px 14px;" /><button type="button" class="pw-eye" onclick="togglePw('acctEmailPass',this)">👁</button></div>
+          <button class="btn" id="changeEmailBtn" style="width:100%;justify-content:center;">✉️ Update Email</button>
+          <div style="font-size:12px;min-height:16px;" id="emailChangeMsg"></div>
+        </div>
+        <div class="divider"></div>
         <button class="btn" id="logoutBtn" style="width:100%;justify-content:center;">🚪 Sign Out</button>
       </div>
     </div>
@@ -682,6 +690,25 @@ const Auth = {
       if(newPass.length<6) return{ok:false,err:"New password must be at least 6 characters."};
       await db.collection("users").doc(key).update({password:newPass});
       return{ok:true};
+    }catch(e){ return{ok:false,err:"Update failed. Please try again."}; }
+  },
+  async changeEmail(currentEmail, password, newEmail){
+    const oldKey = currentEmail.toLowerCase().trim();
+    const newKey = newEmail.toLowerCase().trim();
+    try{
+      // Verify current password
+      const oldDoc = await db.collection("users").doc(oldKey).get();
+      if(!oldDoc.exists) return{ok:false,err:"Account not found."};
+      if(oldDoc.data().password !== password) return{ok:false,err:"Current password is incorrect."};
+      // Check new email not already taken
+      const existing = await db.collection("users").doc(newKey).get();
+      if(existing.exists) return{ok:false,err:"An account with that email already exists."};
+      // Copy all data to new doc with new email key
+      const data = {...oldDoc.data(), email: newKey};
+      await db.collection("users").doc(newKey).set(data);
+      // Delete old doc
+      await db.collection("users").doc(oldKey).delete();
+      return{ok:true, newEmail: newKey};
     }catch(e){ return{ok:false,err:"Update failed. Please try again."}; }
   },
   async saveShippingAddress(email, addr){
@@ -1110,6 +1137,29 @@ document.getElementById("saveAddressBtn").addEventListener("click",async()=>{
   const msg=document.getElementById("addressMsg");
   msg.style.color="#4ade80";msg.textContent=addr?"✅ Address saved!":"Address cleared.";
   setTimeout(()=>msg.textContent="",2500);
+});
+
+document.getElementById("changeEmailBtn").addEventListener("click",async()=>{
+  const user=getSession(); if(!user) return;
+  const newEmail=document.getElementById("acctNewEmail").value.trim();
+  const password=document.getElementById("acctEmailPass").value;
+  const msg=document.getElementById("emailChangeMsg");
+  if(!newEmail){ msg.style.color="#ff6b6b"; msg.textContent="Please enter a new email address."; return; }
+  if(!password){ msg.style.color="#ff6b6b"; msg.textContent="Please enter your current password."; return; }
+  if(newEmail.toLowerCase()===user.email.toLowerCase()){ msg.style.color="#ff6b6b"; msg.textContent="That's already your current email."; return; }
+  msg.style.color="var(--muted)"; msg.textContent="Updating…";
+  const res=await Auth.changeEmail(user.email, password, newEmail);
+  if(!res.ok){ msg.style.color="#ff6b6b"; msg.textContent=res.err; return; }
+  // Update session with new email
+  const updatedUser={...user, email:res.newEmail};
+  setSession(updatedUser);
+  currentUser=updatedUser;
+  document.getElementById("acctNewEmail").value="";
+  document.getElementById("acctEmailPass").value="";
+  msg.style.color="#4ade80"; msg.textContent="✅ Email updated to "+res.newEmail+"!";
+  // Update pre-filled order form email
+  const orderEmailEl=document.getElementById("orderEmail");
+  if(orderEmailEl) orderEmailEl.value=res.newEmail;
 });
 
 document.getElementById("changePassBtn").addEventListener("click",async()=>{
