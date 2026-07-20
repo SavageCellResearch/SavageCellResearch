@@ -1042,8 +1042,9 @@ document.getElementById("landingForgotBtn").addEventListener("click", async()=>{
     msg.style.color="#4ade80";
     msg.textContent="If an account exists for that email, a temporary password has been sent.";
   } catch(e){
+    console.error("Password reset error:", e);
     msg.style.color="#ff6b6b";
-    msg.textContent="Something went wrong. Please try again.";
+    msg.textContent="Something went wrong: " + (e.message||e);
   }
   btn.disabled=false; btn.textContent="Send Temporary Password";
 });
