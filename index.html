@@ -482,6 +482,11 @@
         <div id="ccPayNotice" style="display:none;margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);font-size:12px;color:rgba(242,242,242,.85);line-height:1.5;">
           💳 A secure payment link will be sent to your email after submitting your order. A 6% processing fee has been added to your total.
         </div>
+        <div id="p2pPayNotice" style="display:none;margin-top:8px;padding:12px 14px;border-radius:12px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.3);font-size:12px;color:rgba(242,242,242,.9);line-height:1.7;">
+          <b style="font-size:13px;color:#fbbf24;">⚠️ Important Payment Instructions:</b><br/>
+          <b>Note/Memo field:</b> Type <b style="color:#fff;">Thanks</b> — nothing else.<br/>
+          <b>Send as:</b> <b style="color:#fff;">Friends &amp; Family</b> (or Personal). Do <b style="color:#fff;">NOT</b> select Goods &amp; Services or turn on Purchases — this can get the account flagged.
+        </div>
         <div class="divider"></div>
         <div id="promoSelectorWrap" style="display:none;margin-bottom:10px;padding:12px;border-radius:12px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.25);">
           <b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;display:block;margin-bottom:8px;">🎉 You qualify for 2 offers — pick one</b>
@@ -825,6 +830,8 @@ function setPayment(btn){
   state.paymentMethod=btn.dataset.method;
   const ccNotice=document.getElementById("ccPayNotice");
   if(ccNotice) ccNotice.style.display=state.paymentMethod==="Credit Card"?"block":"none";
+  const p2pNotice=document.getElementById("p2pPayNotice");
+  if(p2pNotice) p2pNotice.style.display=["Venmo","Cash App","PayPal"].includes(state.paymentMethod)?"block":"none";
   renderCart();
 }
 
