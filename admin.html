@@ -352,6 +352,9 @@
       <div id="productSearchResults" style="display:none;margin-top:10px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);">
         <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Customers who purchased this product:</div>
         <div id="productSearchList" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <div style="margin-top:12px;">
+          <button class="btn success" id="emailProductCustomersBtn" onclick="emailProductCustomers()" style="font-size:12px;">📨 Email These Customers</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
@@ -452,6 +455,12 @@
             <div style="display:flex;gap:8px;margin-bottom:8px;">
               <button class="btn" id="promoAudAll" onclick="setPromoAudience('all')" style="flex:1;" data-active="true">👥 All Accounts</button>
               <button class="btn" id="promoAudOne" onclick="setPromoAudience('one')" style="flex:1;" data-active="false">👤 One Person</button>
+              <button class="btn" id="promoAudList" onclick="setPromoAudience('list')" style="flex:1;" data-active="false">📋 Custom List</button>
+            </div>
+            <div id="promoCustomListWrap" style="display:none;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Sending to <span id="promoCustomListCount" style="color:var(--ink);font-weight:900;">0</span> customers from product search:</div>
+              <div id="promoCustomListPreview" style="max-height:100px;overflow-y:auto;scrollbar-width:none;font-size:11px;color:var(--muted);line-height:1.8;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 10px;"></div>
+              <div style="margin-top:6px;font-size:11px;color:#fbbf24;">💡 Go to Orders tab → search a product → click "Email These Customers" to populate this list.</div>
             </div>
             <div id="promoSingleWrap" style="display:none;">
               <input class="inline-input" id="promoSingleEmail" placeholder="Email address or search name…" oninput="filterPromoAccounts()" style="width:100%;margin-bottom:4px;" />
@@ -701,6 +710,24 @@ function renderOrders(orders){
   `).join("");
 }
 
+function emailProductCustomers(){
+  if(!promoCustomList.length){
+    alert("No customers found. Search a product first.");
+    return;
+  }
+  // Switch to Promotions tab and set audience to custom list
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  const promoTab = [...document.querySelectorAll(".tab")].find(t => t.textContent.includes("Promotions"));
+  if(promoTab) promoTab.classList.add("active");
+  document.getElementById("panel-promotions").classList.add("active");
+  populatePromoCodeDropdown();
+  loadPromoHistory();
+  setPromoAudience("list");
+  // Scroll to top of promotions panel
+  document.getElementById("panel-promotions").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
 function filterByProduct(){
   const q = document.getElementById("productSearch").value.toLowerCase().trim();
   const resultsBox = document.getElementById("productSearchResults");
@@ -731,6 +758,15 @@ function filterByProduct(){
     }
   });
 
+  // Store in promoCustomList for email feature
+  promoCustomList = customers.filter(c => c.email !== "—");
+
+  // Update custom list preview in Promotions tab
+  const clCount = document.getElementById("promoCustomListCount");
+  const clPreview = document.getElementById("promoCustomListPreview");
+  if(clCount) clCount.textContent = promoCustomList.length;
+  if(clPreview) clPreview.innerHTML = promoCustomList.map(c=>`<div><b>${esc(c.name)}</b> — ${esc(c.email)}</div>`).join("");
+
   countEl.textContent = matches.length ? `${matches.length} order${matches.length===1?"":"s"} · ${customers.length} customer${customers.length===1?"":"s"}` : "No results";
 
   if(customers.length){
@@ -742,6 +778,7 @@ function filterByProduct(){
       </div>`).join("");
   } else {
     resultsBox.style.display="none";
+    promoCustomList = [];
   }
 
   // Also filter the orders table to show matching orders
@@ -1412,15 +1449,24 @@ function togglePw(id, btn){
 let promoAudience = "all";   // "all" | "one"
 let promoCodeMode = "existing"; // "existing" | "new"
 let promoSelectedEmail = "";
+let promoCustomList = []; // [{name, email}] populated from product search
 
 function setPromoAudience(mode){
   promoAudience = mode;
-  document.getElementById("promoAudAll").style.borderColor = mode==="all" ? "rgba(208,21,31,.8)" : "";
-  document.getElementById("promoAudAll").style.background  = mode==="all" ? "rgba(208,21,31,.15)" : "";
-  document.getElementById("promoAudOne").style.borderColor = mode==="one" ? "rgba(208,21,31,.8)" : "";
-  document.getElementById("promoAudOne").style.background  = mode==="one" ? "rgba(208,21,31,.15)" : "";
+  const btns = {
+    all: document.getElementById("promoAudAll"),
+    one: document.getElementById("promoAudOne"),
+    list: document.getElementById("promoAudList")
+  };
+  Object.keys(btns).forEach(k => {
+    if(btns[k]){
+      btns[k].style.borderColor = mode===k ? "rgba(208,21,31,.8)" : "";
+      btns[k].style.background  = mode===k ? "rgba(208,21,31,.15)" : "";
+    }
+  });
   document.getElementById("promoSingleWrap").style.display = mode==="one" ? "block" : "none";
-  promoSelectedEmail = "";
+  document.getElementById("promoCustomListWrap").style.display = mode==="list" ? "block" : "none";
+  if(mode!=="one") promoSelectedEmail = "";
 }
 
 function setPromoCodeMode(mode){
@@ -1573,6 +1619,10 @@ async function sendPromoEmail(){
     recipients = allAccounts.filter(a=>a.email).map(a=>({email:a.email, name:a.name||"Member"}));
     if(!recipients.length){ msg.style.color="#ff6b6b"; msg.textContent="No account holders found to send to."; return; }
     if(!confirm(`Send this promo to all ${recipients.length} account holders?`)) return;
+  } else if(promoAudience==="list"){
+    if(!promoCustomList.length){ msg.style.color="#ff6b6b"; msg.textContent="No customers in custom list. Search a product in the Orders tab first."; return; }
+    recipients = promoCustomList;
+    if(!confirm(`Send this promo to ${recipients.length} customer${recipients.length===1?"":"s"} from your product search?`)) return;
   } else {
     const targetEmail = promoSelectedEmail || document.getElementById("promoSingleEmail").value.trim();
     if(!targetEmail){ msg.style.color="#ff6b6b"; msg.textContent="Please enter or select a recipient email."; return; }
