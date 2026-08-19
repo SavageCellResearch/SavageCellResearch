@@ -345,6 +345,14 @@
         <button class="btn" onclick="loadOrders()">🔄 Refresh</button>
       </div>
       <div class="search-bar"><input type="search" id="orderSearch" placeholder="Search by name, email, status…" oninput="filterOrders()" /></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+        <div class="search-bar" style="flex:1;"><input type="search" id="productSearch" placeholder="🔍 Search by product name (e.g. BPC-157, SS-31)…" oninput="filterByProduct()" /></div>
+        <div id="productSearchCount" style="font-size:12px;color:var(--muted);white-space:nowrap;min-width:80px;"></div>
+      </div>
+      <div id="productSearchResults" style="display:none;margin-top:10px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Customers who purchased this product:</div>
+        <div id="productSearchList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
       <div class="table-wrap">
         <table>
           <colgroup>
@@ -693,8 +701,61 @@ function renderOrders(orders){
   `).join("");
 }
 
+function filterByProduct(){
+  const q = document.getElementById("productSearch").value.toLowerCase().trim();
+  const resultsBox = document.getElementById("productSearchResults");
+  const list = document.getElementById("productSearchList");
+  const countEl = document.getElementById("productSearchCount");
+
+  if(!q){
+    resultsBox.style.display="none";
+    countEl.textContent="";
+    renderOrders(allOrders);
+    return;
+  }
+
+  // Find all orders that contain the searched product in cartLines
+  const matches = allOrders.filter(o => {
+    const raw = typeof o.cartLines === "string" ? o.cartLines : (typeof o.lines === "string" ? o.lines : "");
+    return raw.toLowerCase().includes(q);
+  });
+
+  // Build unique customer list
+  const seen = new Set();
+  const customers = [];
+  matches.forEach(o => {
+    const key = (o.customerEmail||"").toLowerCase();
+    if(!seen.has(key)){
+      seen.add(key);
+      customers.push({name: o.customerName||"—", email: o.customerEmail||"—"});
+    }
+  });
+
+  countEl.textContent = matches.length ? `${matches.length} order${matches.length===1?"":"s"} · ${customers.length} customer${customers.length===1?"":"s"}` : "No results";
+
+  if(customers.length){
+    resultsBox.style.display="block";
+    list.innerHTML = customers.map(c => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">
+        <span style="font-weight:900;font-size:13px;color:var(--ink);">${esc(c.name)}</span>
+        <span style="font-size:12px;color:var(--muted);">${esc(c.email)}</span>
+      </div>`).join("");
+  } else {
+    resultsBox.style.display="none";
+  }
+
+  // Also filter the orders table to show matching orders
+  renderOrders(matches);
+}
+
 function filterOrders(){
   const q = document.getElementById("orderSearch").value.toLowerCase();
+  // Clear product search when using main search
+  if(q){
+    document.getElementById("productSearch").value="";
+    document.getElementById("productSearchResults").style.display="none";
+    document.getElementById("productSearchCount").textContent="";
+  }
   if(!q){ renderOrders(allOrders); return; }
   renderOrders(allOrders.filter(o =>
     (o.customerName||"").toLowerCase().includes(q) ||
