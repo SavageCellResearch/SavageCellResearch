@@ -1044,17 +1044,79 @@ document.getElementById("landingSignInBtn").addEventListener("click",async()=>{
   }
 });
 
+// Store pending applicant info
+let pendingApplicant = null;
+
 document.getElementById("landingSignUpBtn").addEventListener("click",async()=>{
   const name=document.getElementById("landingName").value.trim(),email=document.getElementById("landingSignUpEmail").value.trim(),pass=document.getElementById("landingSignUpPass").value;
   if(!document.getElementById("landingAgeCheck").checked){document.getElementById("landingSignUpErr").textContent="You must confirm you are 21 or older.";return;}
-  const btn=document.getElementById("landingSignUpBtn");btn.disabled=true;btn.textContent="Creating…";
-  const res=await Auth.signup(name,email,pass);
+  if(!name){document.getElementById("landingSignUpErr").textContent="Please enter your name.";return;}
+  if(!email){document.getElementById("landingSignUpErr").textContent="Please enter your email.";return;}
+  if(!pass||pass.length<6){document.getElementById("landingSignUpErr").textContent="Password must be at least 6 characters.";return;}
+
+  // Check email not already taken
+  const btn=document.getElementById("landingSignUpBtn");btn.disabled=true;btn.textContent="Checking…";
+  const existing=await db.collection("users").doc(email.toLowerCase().trim()).get();
   btn.disabled=false;btn.textContent="Create Account →";
-  if(!res.ok){document.getElementById("landingSignUpErr").textContent=res.err;return;}
-  updateAuthBtn();
-  document.getElementById("orderName").value=res.user.name;
-  document.getElementById("orderEmail").value=res.user.email;
-  enterCatalog();
+  if(existing.exists){document.getElementById("landingSignUpErr").textContent="An account with that email already exists.";return;}
+
+  // Check not already a pending application
+  const pendingSnap=await db.collection("applications").where("email","==",email.toLowerCase().trim()).limit(1).get();
+  if(!pendingSnap.empty){document.getElementById("landingSignUpErr").textContent="An application for that email is already pending review.";return;}
+
+  // Store info and show application form
+  pendingApplicant = {name, email: email.toLowerCase().trim(), password: pass};
+  document.getElementById("appPhone").value="";
+  document.getElementById("appAddress").value="";
+  document.getElementById("appReferral").value="";
+  document.getElementById("appErr").textContent="";
+  document.getElementById("applicationModal").style.display="flex";
+});
+
+document.getElementById("appSubmitBtn").addEventListener("click", async()=>{
+  const phone=document.getElementById("appPhone").value.trim();
+  const address=document.getElementById("appAddress").value.trim();
+  const referral=document.getElementById("appReferral").value.trim();
+  const errEl=document.getElementById("appErr");
+
+  if(!phone){errEl.textContent="Phone number is required.";return;}
+  if(!address){errEl.textContent="Address is required.";return;}
+  if(!referral){errEl.textContent="Please tell us who referred you.";return;}
+
+  const btn=document.getElementById("appSubmitBtn");
+  btn.disabled=true;btn.textContent="Submitting…";
+
+  try{
+    // Save application to Firestore
+    await db.collection("applications").add({
+      name: pendingApplicant.name,
+      email: pendingApplicant.email,
+      password: pendingApplicant.password,
+      phone, address, referral,
+      status: "pending",
+      submittedAt: new Date().toISOString()
+    });
+
+    // Email Corey
+    await fetch("https://savagecell-mailer.jasminegalanon.workers.dev",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({type:"application",data:{
+        name: pendingApplicant.name,
+        email: pendingApplicant.email,
+        phone, address, referral,
+        submittedAt: new Date().toLocaleString()
+      }})
+    });
+
+    // Hide modal, show pending overlay
+    document.getElementById("applicationModal").style.display="none";
+    document.getElementById("appPendingOverlay").style.display="flex";
+    pendingApplicant=null;
+  }catch(e){
+    errEl.textContent="Something went wrong. Please try again.";
+  }
+  btn.disabled=false;btn.textContent="Submit Application";
 });
 
 ["landingEmail","landingPass"].forEach(id=>{document.getElementById(id).addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("landingSignInBtn").click();});});
@@ -1594,5 +1656,38 @@ async function init(){
 }
 init();
 </script>
+<!-- APPLICATION MODAL -->
+<div id="applicationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0f0f12;border:1px solid rgba(208,21,31,.3);border-radius:20px;padding:28px 24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;scrollbar-width:none;">
+    <h2 style="font-size:20px;font-weight:900;color:#f2f2f2;margin:0 0 6px;">📋 Complete Your Application</h2>
+    <p style="font-size:13px;color:#a9a9b5;margin:0 0 20px;line-height:1.5;">Your account request has been received. Please fill out the information below. Corey will review and approve your access.</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Phone Number <span style="color:#d0151f;">*</span></label>
+        <input id="appPhone" type="tel" placeholder="(555) 555-5555" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Address <span style="color:#d0151f;">*</span></label>
+        <input id="appAddress" type="text" placeholder="Street, City, State, ZIP" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Who Referred You? <span style="color:#d0151f;">*</span></label>
+        <input id="appReferral" type="text" placeholder="Name of person who referred you" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+      </div>
+      <div id="appErr" style="font-size:12px;color:#ff6b6b;min-height:16px;"></div>
+      <button id="appSubmitBtn" style="width:100%;padding:13px;background:linear-gradient(180deg,rgba(208,21,31,.9),rgba(167,14,22,.9));color:#fff;font-weight:900;font-size:15px;border:none;border-radius:12px;cursor:pointer;">Submit Application</button>
+    </div>
+  </div>
+</div>
+
+<!-- APPLICATION PENDING OVERLAY -->
+<div id="appPendingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0f0f12;border:1px solid rgba(74,222,128,.3);border-radius:20px;padding:36px 28px;width:100%;max-width:420px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:16px;">⏳</div>
+    <h2 style="font-size:22px;font-weight:900;color:#f2f2f2;margin:0 0 10px;">Application Submitted!</h2>
+    <p style="font-size:14px;color:#a9a9b5;line-height:1.6;margin:0;">Thank you! Your application has been received and is pending review. You will receive an email once your account has been approved.</p>
+  </div>
+</div>
+
 </body>
 </html>
