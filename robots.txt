@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# This site is referral-only. Direct URL access is still permitted.
