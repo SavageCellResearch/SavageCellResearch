@@ -336,6 +336,7 @@
       <button class="tab" onclick="switchTab('accounts')">🔑 Account Holders</button>
       <button class="tab" onclick="switchTab('discounts')">🏷️ Discount Codes</button>
       <button class="tab" onclick="switchTab('promotions')">📣 Promotions</button>
+      <button class="tab" onclick="switchTab('applications')">📋 Applications</button>
     </div>
 
     <!-- ORDERS PANEL -->
@@ -434,6 +435,17 @@
             <tr><td colspan="6" class="loading">Loading accounts…</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- APPLICATIONS PANEL -->
+    <div class="panel" id="panel-applications">
+      <div class="section-head">
+        <div class="section-title">📋 Membership Applications</div>
+        <button class="btn" onclick="loadApplications()" style="font-size:12px;">🔄 Refresh</button>
+      </div>
+      <div id="applicationsWrap">
+        <div class="loading">Loading applications…</div>
       </div>
     </div>
 
@@ -1333,9 +1345,11 @@ function switchTab(name){
   if(name==="promotions"){
     populatePromoCodeDropdown();
     loadPromoHistory();
-    // init button states
     setPromoAudience("all");
     setPromoCodeMode("existing");
+  }
+  if(name==="applications"){
+    loadApplications();
   }
 }
 
@@ -1443,6 +1457,107 @@ function togglePw(id, btn){
   const input = document.getElementById(id);
   if(input.type === "password"){ input.type = "text"; btn.textContent = "🙈"; }
   else { input.type = "password"; btn.textContent = "👁"; }
+}
+
+/* ══ APPLICATIONS ══ */
+async function loadApplications(){
+  const wrap = document.getElementById("applicationsWrap");
+  wrap.innerHTML = `<div class="loading">Loading…</div>`;
+  try{
+    const snap = await db.collection("applications").orderBy("submittedAt","desc").get();
+    if(snap.empty){
+      wrap.innerHTML = `<div class="empty-state" style="padding:40px;text-align:center;color:var(--muted);">No applications yet.</div>`;
+      return;
+    }
+    const cards = snap.docs.map(doc => {
+      const d = doc.data();
+      const date = d.submittedAt ? new Date(d.submittedAt).toLocaleString() : "—";
+      const statusColor = d.status==="pending" ? "#fbbf24" : d.status==="approved" ? "#4ade80" : "#ff6b6b";
+      return `
+      <div style="border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;margin-bottom:12px;background:rgba(255,255,255,.02);">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+          <div>
+            <div style="font-size:16px;font-weight:980;color:var(--ink);">${esc(d.name)}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:2px;">${esc(d.email)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:900;color:${statusColor};text-transform:uppercase;letter-spacing:.1em;">${d.status||"pending"}</span>
+            <span style="font-size:11px;color:var(--muted2);">${date}</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px 12px;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px;">Phone</div>
+            <div style="font-size:13px;color:var(--ink);">${esc(d.phone||"—")}</div>
+          </div>
+          <div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px 12px;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px;">Referred By</div>
+            <div style="font-size:13px;color:var(--ink);">${esc(d.referral||"—")}</div>
+          </div>
+          <div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px 12px;grid-column:span 2;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px;">Address</div>
+            <div style="font-size:13px;color:var(--ink);">${esc(d.address||"—")}</div>
+          </div>
+        </div>
+        ${d.status==="pending" ? `
+        <div style="display:flex;gap:8px;">
+          <button class="btn success" onclick="approveApplication('${doc.id}')" style="flex:1;">✅ Approve</button>
+          <button class="btn danger" onclick="denyApplication('${doc.id}')" style="flex:1;">❌ Deny</button>
+        </div>` : ""}
+      </div>`;
+    }).join("");
+    wrap.innerHTML = cards;
+  }catch(e){
+    wrap.innerHTML = `<div style="color:#ff6b6b;padding:20px;">Error loading applications: ${e.message}</div>`;
+  }
+}
+
+async function approveApplication(docId){
+  if(!confirm("Approve this application and create their account?")) return;
+  try{
+    const doc = await db.collection("applications").doc(docId).get();
+    if(!doc.exists){ alert("Application not found."); return; }
+    const d = doc.data();
+
+    // Create the user account
+    await db.collection("users").doc(d.email).set({
+      name: d.name,
+      email: d.email,
+      password: d.password,
+      phone: d.phone,
+      shippingAddress: d.address,
+      orders: [],
+      savedCart: [],
+      createdAt: new Date().toISOString()
+    });
+
+    // Send welcome email to customer
+    await fetch(WORKER_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({type:"applicationApproved",data:{
+        name: d.name,
+        email: d.email
+      }})
+    });
+
+    // Mark application as approved
+    await db.collection("applications").doc(docId).update({status:"approved",approvedAt:new Date().toISOString()});
+    alert(`✅ ${d.name}'s account has been created and they've been notified by email!`);
+    loadApplications();
+  }catch(e){
+    alert("Error approving application: " + e.message);
+  }
+}
+
+async function denyApplication(docId){
+  if(!confirm("Deny this application? No email will be sent to the applicant.")) return;
+  try{
+    await db.collection("applications").doc(docId).update({status:"denied",deniedAt:new Date().toISOString()});
+    loadApplications();
+  }catch(e){
+    alert("Error denying application: " + e.message);
+  }
 }
 
 /* ══ PROMOTIONS ══ */
