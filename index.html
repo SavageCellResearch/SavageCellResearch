@@ -1364,15 +1364,10 @@ function computeDiscounts(){
   // 3. Vial bulk discounts — only injectable cats
   const injectableItems=items.filter(it=>isInjectable(it.cat));
 
-  // 5 mix vials 5% (5+ different injectable products)
+  // 5 mix vials 5% (5+ different injectable products) — applies to full injectable subtotal
   const uniqueInjectables=new Set(injectableItems.map(it=>it.itemId||it.name));
   if(uniqueInjectables.size>=5){
-    // Apply 5% to cheapest 5 injectable items by unit
-    const units=[];
-    for(const it of injectableItems){ for(let i=0;i<it.qty;i++) units.push({price:it.unitPrice,name:it.name}); }
-    units.sort((a,b)=>a.price-b.price);
-    const eligible=units.slice(0,5);
-    const base=eligible.reduce((a,x)=>a+x.price,0);
+    const base=injectableItems.reduce((a,x)=>a+x.unitPrice*x.qty,0);
     if(base>0) discounts.push({label:"5 Mix Vials 5% Off",amount:base*0.05,type:"mix5"});
   }
 
