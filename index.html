@@ -600,6 +600,40 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.10);padding:10px 12px;border-radius:999px;box-shadow:0 18px 45px rgba(0,0,0,.45);font-size:12px;font-weight:900;letter-spacing:.1px;color:rgba(242,242,242,.92);display:none;z-index:1200;backdrop-filter:blur(10px);"></div>
 
+<!-- APPLICATION MODAL -->
+<div id="applicationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0f0f12;border:1px solid rgba(208,21,31,.3);border-radius:20px;padding:28px 24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;scrollbar-width:none;">
+    <h2 style="font-size:20px;font-weight:900;color:#f2f2f2;margin:0 0 6px;">📋 Complete Your Application</h2>
+    <p style="font-size:13px;color:#a9a9b5;margin:0 0 20px;line-height:1.5;">Your account request has been received. Please fill out the information below. Corey will review and approve your access.</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Phone Number <span style="color:#d0151f;">*</span></label>
+        <input id="appPhone" type="tel" placeholder="(555) 555-5555" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Address <span style="color:#d0151f;">*</span></label>
+        <input id="appAddress" type="text" placeholder="Street, City, State, ZIP" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Who Referred You? <span style="color:#d0151f;">*</span></label>
+        <input id="appReferral" type="text" placeholder="Name of person who referred you" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+      </div>
+      <div id="appErr" style="font-size:12px;color:#ff6b6b;min-height:16px;"></div>
+      <button id="appSubmitBtn" style="width:100%;padding:13px;background:linear-gradient(180deg,rgba(208,21,31,.9),rgba(167,14,22,.9));color:#fff;font-weight:900;font-size:15px;border:none;border-radius:12px;cursor:pointer;">Submit Application</button>
+    </div>
+  </div>
+</div>
+
+<!-- APPLICATION PENDING OVERLAY -->
+<div id="appPendingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0f0f12;border:1px solid rgba(74,222,128,.3);border-radius:20px;padding:36px 28px;width:100%;max-width:420px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:16px;">⏳</div>
+    <h2 style="font-size:22px;font-weight:900;color:#f2f2f2;margin:0 0 10px;">Application Submitted!</h2>
+    <p style="font-size:14px;color:#a9a9b5;line-height:1.6;margin:0;">Thank you! Your application has been received and is pending review. You will receive an email once your account has been approved.</p>
+  </div>
+</div>
+
+
 <script>
 /* ══ FIREBASE CONFIG ══ */
 const firebaseConfig = {
@@ -1656,38 +1690,5 @@ async function init(){
 }
 init();
 </script>
-<!-- APPLICATION MODAL -->
-<div id="applicationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#0f0f12;border:1px solid rgba(208,21,31,.3);border-radius:20px;padding:28px 24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;scrollbar-width:none;">
-    <h2 style="font-size:20px;font-weight:900;color:#f2f2f2;margin:0 0 6px;">📋 Complete Your Application</h2>
-    <p style="font-size:13px;color:#a9a9b5;margin:0 0 20px;line-height:1.5;">Your account request has been received. Please fill out the information below. Corey will review and approve your access.</p>
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <div>
-        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Phone Number <span style="color:#d0151f;">*</span></label>
-        <input id="appPhone" type="tel" placeholder="(555) 555-5555" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
-      </div>
-      <div>
-        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Address <span style="color:#d0151f;">*</span></label>
-        <input id="appAddress" type="text" placeholder="Street, City, State, ZIP" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
-      </div>
-      <div>
-        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Who Referred You? <span style="color:#d0151f;">*</span></label>
-        <input id="appReferral" type="text" placeholder="Name of person who referred you" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
-      </div>
-      <div id="appErr" style="font-size:12px;color:#ff6b6b;min-height:16px;"></div>
-      <button id="appSubmitBtn" style="width:100%;padding:13px;background:linear-gradient(180deg,rgba(208,21,31,.9),rgba(167,14,22,.9));color:#fff;font-weight:900;font-size:15px;border:none;border-radius:12px;cursor:pointer;">Submit Application</button>
-    </div>
-  </div>
-</div>
-
-<!-- APPLICATION PENDING OVERLAY -->
-<div id="appPendingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#0f0f12;border:1px solid rgba(74,222,128,.3);border-radius:20px;padding:36px 28px;width:100%;max-width:420px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:16px;">⏳</div>
-    <h2 style="font-size:22px;font-weight:900;color:#f2f2f2;margin:0 0 10px;">Application Submitted!</h2>
-    <p style="font-size:14px;color:#a9a9b5;line-height:1.6;margin:0;">Thank you! Your application has been received and is pending review. You will receive an email once your account has been approved.</p>
-  </div>
-</div>
-
 </body>
 </html>
