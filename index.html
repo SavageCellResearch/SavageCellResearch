@@ -610,8 +610,22 @@
         <input id="appPhone" type="tel" placeholder="(555) 555-5555" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
       </div>
       <div>
-        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Address <span style="color:#d0151f;">*</span></label>
-        <input id="appAddress" type="text" placeholder="Street, City, State, ZIP" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Street Address <span style="color:#d0151f;">*</span></label>
+        <input id="appStreet" type="text" placeholder="123 Main St" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">City <span style="color:#d0151f;">*</span></label>
+        <input id="appCity" type="text" placeholder="City" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">State <span style="color:#d0151f;">*</span></label>
+          <input id="appState" type="text" placeholder="IA" maxlength="2" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;text-transform:uppercase;" />
+        </div>
+        <div>
+          <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">ZIP <span style="color:#d0151f;">*</span></label>
+          <input id="appZip" type="text" placeholder="50169" maxlength="10" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#f2f2f2;font-size:14px;outline:none;box-sizing:border-box;" />
+        </div>
       </div>
       <div>
         <label style="font-size:11px;color:#a9a9b5;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;">Who Referred You? <span style="color:#d0151f;">*</span></label>
@@ -1100,7 +1114,10 @@ document.getElementById("landingSignUpBtn").addEventListener("click",async()=>{
   // Store info and show application form
   pendingApplicant = {name, email: email.toLowerCase().trim(), password: pass};
   document.getElementById("appPhone").value="";
-  document.getElementById("appAddress").value="";
+  document.getElementById("appStreet").value="";
+  document.getElementById("appCity").value="";
+  document.getElementById("appState").value="";
+  document.getElementById("appZip").value="";
   document.getElementById("appReferral").value="";
   document.getElementById("appErr").textContent="";
   document.getElementById("applicationModal").style.display="flex";
@@ -1108,12 +1125,19 @@ document.getElementById("landingSignUpBtn").addEventListener("click",async()=>{
 
 document.getElementById("appSubmitBtn").addEventListener("click", async()=>{
   const phone=document.getElementById("appPhone").value.trim();
-  const address=document.getElementById("appAddress").value.trim();
+  const street=document.getElementById("appStreet").value.trim();
+  const city=document.getElementById("appCity").value.trim();
+  const state=document.getElementById("appState").value.trim().toUpperCase();
+  const zip=document.getElementById("appZip").value.trim();
+  const address=street&&city&&state&&zip?`${street}, ${city}, ${state} ${zip}`:"";
   const referral=document.getElementById("appReferral").value.trim();
   const errEl=document.getElementById("appErr");
 
   if(!phone){errEl.textContent="Phone number is required.";return;}
-  if(!address){errEl.textContent="Address is required.";return;}
+  if(!street){errEl.textContent="Street address is required.";return;}
+  if(!city){errEl.textContent="City is required.";return;}
+  if(!state){errEl.textContent="State is required.";return;}
+  if(!zip){errEl.textContent="ZIP code is required.";return;}
   if(!referral){errEl.textContent="Please tell us who referred you.";return;}
 
   const btn=document.getElementById("appSubmitBtn");
