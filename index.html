@@ -471,6 +471,13 @@
           <button class="f-toggle-btn" data-active="false" data-method="Bitcoin" onclick="setPayment(this)">₿ Bitcoin</button>
           <button class="f-toggle-btn" data-active="false" data-method="USDC" onclick="setPayment(this)">🔷 USDC</button>
           <button class="f-toggle-btn" data-active="false" data-method="Cash" onclick="setPayment(this)" id="cashBtn">💵 Cash</button>
+          <button class="f-toggle-btn" data-active="false" data-method="Credit Card" onclick="setPayment(this)" id="cardBtn" style="display:none;">💳 Credit/Debit Card</button>
+        </div>
+        <div id="cardOnlyShipNote" style="margin-top:6px;font-size:11px;color:var(--muted);">💳 Credit/Debit Card is available for shipped orders. Choose <b>Ship to Me</b> to use it.</div>
+        <div id="ccPayNotice" style="display:none;margin-top:8px;padding:12px 14px;border-radius:12px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.35);font-size:12px;color:rgba(242,242,242,.9);line-height:1.7;">
+          <b style="font-size:13px;color:#93c5fd;">💳 Paying by Card</b><br/>
+          After you submit your order, your confirmation email will include a <b style="color:#fff;">secure Pay Now link</b> for your exact total.<br/>
+          Payment is processed by our partner <b style="color:#fff;">3thix</b>. Their checkout page will show their processing fee before you pay.
         </div>
         <div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(208,21,31,.10);border:1px solid rgba(208,21,31,.35);font-size:12px;color:rgba(242,242,242,.85);line-height:1.5;">
           ⚠️ <strong style="color:#fff;">Important:</strong> When sending payment through your selected app, do <strong style="color:#fff;">not</strong> include product names in the payment note or memo field.
@@ -860,6 +867,28 @@ function setFulfillment(mode){
     cashBtn.style.display=mode==="ship"?"none":"block";
     if(mode==="ship"&&state.paymentMethod==="Cash"){state.paymentMethod="";document.querySelectorAll("[data-method]").forEach(b=>b.dataset.active="false");}
   }
+  // Credit/Debit Card only available for shipping
+  const cardBtn=document.getElementById("cardBtn");
+  const cardNote=document.getElementById("cardOnlyShipNote");
+  if(cardBtn){
+    cardBtn.style.display=mode==="ship"?"block":"none";
+    if(cardNote) cardNote.style.display=mode==="ship"?"none":"block";
+    if(mode!=="ship"&&state.paymentMethod==="Credit Card"){
+      state.paymentMethod="";
+      document.querySelectorAll("[data-method]").forEach(b=>b.dataset.active="false");
+      const ccNotice=document.getElementById("ccPayNotice");
+      if(ccNotice) ccNotice.style.display="none";
+      renderCart();
+    }
+  }
+}
+
+/* ══ ORDER REFERENCE (used to match card payments in 3thix) ══ */
+function makeOrderRef(){
+  const d=new Date();
+  const ymd=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+  const rand=Math.random().toString(36).slice(2,8).toUpperCase();
+  return `SCR-${ymd}-${rand}`;
 }
 
 /* ══ PAYMENT METHOD ══ */
@@ -1332,9 +1361,11 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   if(!phone){statusEl.className="order-status error";statusEl.textContent="Please enter your phone number.";return;}
   if(!state.paymentMethod){statusEl.className="order-status error";statusEl.textContent="Please select a payment method.";return;}
   if(state.cart.size===0){statusEl.className="order-status error";statusEl.textContent="Your cart is empty.";return;}
+  if(state.paymentMethod==="Credit Card"&&state.fulfillment!=="ship"){statusEl.className="order-status error";statusEl.textContent="Credit/Debit Card is only available for shipped orders. Please choose Ship to Me or another payment method.";return;}
   if(state.fulfillment==="ship"&&(!shipStreet||!shipCity||!shipState||!shipZip)){statusEl.className="order-status error";statusEl.textContent="Please fill in all shipping address fields (Street, City, State, ZIP).";return;}
 
   const t=computeTotals();
+  const orderRef=makeOrderRef();
   const cartLines=[...state.cart.values()].map(it=>`${it.name} (${it.strength}) x${it.qty} = ${money(it.unitPrice*it.qty)}`).join("\n");
   const method=state.fulfillment==="pickup"?"Local Pickup":`Ship to: ${addr}`;
   const btn=document.getElementById("submitOrder");
@@ -1349,6 +1380,8 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
       itemCount:`${t.count} item(s)`, notes:notes||"None",
       orderDate:new Date().toLocaleString(),
       paymentMethod:state.paymentMethod,
+      orderRef,
+      totalCents:Math.round(t.total*100),
       shipping:t.shipping,
       discountSummary,
       discountTotal:t.totalDiscount>0?money(t.totalDiscount):""
@@ -1360,7 +1393,7 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   }
 
   const user=getSession();
-  const orderRecord={date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray(),customerName:name,customerEmail:email,customerPhone:phone,fulfillment:method,cartLines,paymentMethod:state.paymentMethod,status:"Pending",trackingNumber:"",submittedAt:new Date().toISOString(),discounts:t.discounts.map(d=>d.label),discountTotal:t.totalDiscount};
+  const orderRecord={date:new Date().toLocaleDateString(),total:t.total,lines:[...state.cart.values()].map(it=>`${it.name} × ${it.qty}`).join(", "),method:state.fulfillment,cartSnapshot:cartToArray(),customerName:name,customerEmail:email,customerPhone:phone,fulfillment:method,cartLines,paymentMethod:state.paymentMethod,orderRef,status:"Pending",trackingNumber:"",submittedAt:new Date().toISOString(),discounts:t.discounts.map(d=>d.label),discountTotal:t.totalDiscount};
   if(user) await Auth.addOrder(user.email,orderRecord);
   // Mark discount codes as used
   for(const c of state.appliedCodes){
@@ -1377,7 +1410,9 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   state.firstOrderDiscount=false;
   state.activePromo=null;
 
-  statusEl.className="order-status success";statusEl.textContent="✅ Order received! You will receive a confirmation email shortly with payment instructions and pickup or delivery details.";
+  statusEl.className="order-status success";statusEl.textContent=state.paymentMethod==="Credit Card"
+    ?"✅ Order received! Check your email shortly for your secure Pay Now link and delivery details."
+    :"✅ Order received! You will receive a confirmation email shortly with payment instructions and pickup or delivery details.";
   state.cart.clear();await persistCart();renderCart();toast("Order submitted!");
   btn.disabled=false;btn.textContent="📨 Send Order to SavageCell";
 });
@@ -1508,7 +1543,7 @@ function computeTotals(){
   const discounts=computeDiscounts();
   const totalDiscount=discounts.reduce((a,d)=>a+d.amount,0);
   const afterDiscounts=Math.max(0,subtotal-totalDiscount)+shipping;
-  const ccFee=state.paymentMethod==="Credit Card"?parseFloat((afterDiscounts*0.03).toFixed(2)):0;
+  const ccFee=0; // 3% card fee removed — 3thix shows its own processing fee at checkout
   const total=afterDiscounts+ccFee;
   return{subtotal,shipping,totalDiscount,discounts,ccFee,total,count:items.reduce((a,x)=>a+x.qty,0),lines:items.length};
 }
