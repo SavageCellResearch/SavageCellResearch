@@ -614,6 +614,7 @@ async function sendWorkerEmail(type, data){
     body: JSON.stringify({ type, data })
   });
   if(!res.ok) throw new Error("Worker error");
+  try{ return await res.json(); }catch(e){ return {}; }
 }
 
 /* ══ ADMIN CREDENTIALS
@@ -967,15 +968,25 @@ async function sendTracking(id){
   if(!confirm(`Send tracking number "${trackingNumber}" via ${carrier||"carrier"} to ${order.customerEmail}?`)) return;
   try{ await db.collection("orders").doc(id).update({trackingNumber, carrier}); }catch(e){}
   try{
-    await sendWorkerEmail("tracking", {
+    const result = await sendWorkerEmail("tracking", {
       customerName: order.customerName||"Customer",
       customerEmail: order.customerEmail,
       trackingNumber,
       carrier: carrier||"your carrier",
       orderLines: order.lines||order.cartLines||"—",
-      orderTotal: `$${Number(order.total||0).toFixed(2)}`
+      orderTotal: `$${Number(order.total||0).toFixed(2)}`,
+      orderRef: order.orderRef||"",
+      paymentMethod: order.paymentMethod||""
     });
-    alert("✅ Tracking email sent!");
+    let msg = "✅ Tracking email sent!";
+    if(order.paymentMethod==="Credit Card"){
+      if(result && result.thixTracking==="submitted"){
+        msg += "\n\n✅ Tracking also sent to 3thix — card payout will release after delivery checks.";
+      }else{
+        msg += "\n\n⚠️ Tracking could NOT be sent to 3thix" + (result && result.thixTracking ? ` (${result.thixTracking})` : "") + ".\nThe card payout for this order may be held. Contact 3thix support with order ref: " + (order.orderRef||"(none)");
+      }
+    }
+    alert(msg);
   }catch(e){ alert("Failed to send tracking email."); }
 }
 
@@ -1305,6 +1316,7 @@ function openOrderDetail(id){
       ${o.discountTotal>0?`<div class="modal-row"><span class="label">Discounts</span><span class="val" style="color:var(--green);">-${money(o.discountTotal)}</span></div>`:""}
       <div class="modal-row"><span class="label">Total</span><span class="val" style="font-size:16px;font-weight:980;">${money(o.total||0)}</span></div>
       <div class="modal-row"><span class="label">Payment</span><span class="val">${esc(o.paymentMethod||"—")}</span></div>
+      ${o.orderRef?`<div class="modal-row"><span class="label">Order Ref</span><span class="val" style="font-family:monospace;">${esc(o.orderRef)}</span></div>`:""}
       <div class="modal-row"><span class="label">Fulfillment</span><span class="val">${esc(o.fulfillment||o.method||"—")}</span></div>
       ${o.notes?`<div class="modal-row"><span class="label">Notes</span><span class="val" style="font-size:12px;white-space:pre-wrap;">${esc(o.notes)}</span></div>`:""}
     </div>
