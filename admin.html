@@ -344,7 +344,7 @@
     <div class="panel active" id="panel-orders">
       <div class="section-head">
         <div class="section-title">All Orders</div>
-        <button class="btn" onclick="loadOrders()">🔄 Refresh</button>
+        <button class="btn" onclick="loadOrders().then(checkCardPayments)">🔄 Refresh</button>
       </div>
       <div class="search-bar"><input type="search" id="orderSearch" placeholder="Search by name, email, status…" oninput="filterOrders()" /></div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
@@ -661,12 +661,84 @@ function showAdmin(){
   document.getElementById("loginWrap").style.display = "none";
   document.getElementById("adminWrap").classList.add("visible");
   loadAll();
+  if(!window._cardCheckTimer) window._cardCheckTimer = setInterval(checkCardPayments, 5 * 60 * 1000);
 }
 
 /* ══ LOAD ALL DATA ══ */
 async function loadAll(){
   await Promise.all([loadOrders(), loadCustomerOrders(), loadAccounts(), loadDiscounts()]);
   updateStats();
+  checkCardPayments();
+}
+
+/* ══ 3THIX: AUTO-CONFIRM PAID CARD ORDERS ══
+   Runs when the dashboard opens, on 🔄 Refresh, and every 5 minutes while open.
+   For each Pending card order, asks 3thix (through the Worker) whether it's paid.
+   Paid orders → status "Payment Confirmed" + receipt email, exactly once per order. */
+let checkingCardPayments = false;
+async function checkCardPayments(){
+  if(checkingCardPayments) return;
+  checkingCardPayments = true;
+  const confirmedNames = [];
+  const receiptFailed = [];
+  try{
+    const pending = allOrders.filter(o =>
+      o.paymentMethod === "Credit Card" && o.orderRef && !o.cardPaid && (o.status||"Pending") === "Pending");
+    for(let i = 0; i < pending.length; i += 25){
+      const batch = pending.slice(i, i + 25);
+      const res = await sendWorkerEmail("checkPayments", { orderRefs: batch.map(o => o.orderRef) });
+      const results = (res && res.results) || {};
+      for(const o of batch){
+        const r = results[o.orderRef];
+        if(!r || r.paid !== true) continue;
+        const ref = db.collection("orders").doc(o.id);
+        let claimed = false;
+        try{
+          await db.runTransaction(async tx => {
+            const snap = await tx.get(ref);
+            const cur = snap.data() || {};
+            if(cur.cardPaid) return;
+            tx.update(ref, {
+              cardPaid: true,
+              cardPaidAt: r.paidAt || new Date().toISOString(),
+              status: (cur.status||"Pending") === "Pending" ? "Payment Confirmed" : cur.status
+            });
+            claimed = true;
+          });
+        }catch(e){ console.warn("Could not mark order paid:", o.orderRef, e); continue; }
+        if(!claimed) continue;
+        const who = o.customerName || o.customerEmail || o.orderRef;
+        confirmedNames.push(who);
+        try{
+          await sendWorkerEmail("receipt", {
+            customerName: o.customerName||"Customer",
+            customerEmail: o.customerEmail,
+            receiptNumber: o.orderRef,
+            datePaid: new Date(r.paidAt || Date.now()).toLocaleDateString(),
+            paymentMethod: "Credit/Debit Card",
+            orderLines: o.lines||o.cartLines||"—",
+            amountPaid: `$${Number(o.total||0).toFixed(2)}`
+          });
+          await ref.update({ receiptSent: true });
+        }catch(e){
+          receiptFailed.push(who);
+          try{ await ref.update({ receiptSent: false }); }catch(_){}
+        }
+      }
+    }
+    if(confirmedNames.length){
+      await loadOrders();
+      updateStats();
+      let msg = `💳 Card payment confirmed by 3thix for: ${confirmedNames.join(", ")}.\nThese orders are now marked Payment Confirmed`;
+      msg += receiptFailed.length ? "." : " and receipts were emailed.";
+      if(receiptFailed.length) msg += `\n\n⚠️ The receipt email failed for: ${receiptFailed.join(", ")}. Use 🧾 Send Receipt on those orders.`;
+      alert(msg);
+    }
+  }catch(e){
+    console.warn("Card payment check failed:", e);
+  }finally{
+    checkingCardPayments = false;
+  }
 }
 
 /* ══ ORDERS ══ */
@@ -1317,6 +1389,7 @@ function openOrderDetail(id){
       <div class="modal-row"><span class="label">Total</span><span class="val" style="font-size:16px;font-weight:980;">${money(o.total||0)}</span></div>
       <div class="modal-row"><span class="label">Payment</span><span class="val">${esc(o.paymentMethod||"—")}</span></div>
       ${o.orderRef?`<div class="modal-row"><span class="label">Order Ref</span><span class="val" style="font-family:monospace;">${esc(o.orderRef)}</span></div>`:""}
+      ${o.paymentMethod==="Credit Card"?`<div class="modal-row"><span class="label">3thix Card Payment</span><span class="val" style="color:${o.cardPaid?"var(--green)":"var(--yellow)"};">${o.cardPaid?`✅ Paid${o.cardPaidAt?` ${esc(new Date(o.cardPaidAt).toLocaleString())}`:""}${o.receiptSent===false?" — ⚠️ receipt not sent":""}`:"⏳ Not paid yet"}</span></div>`:""}
       <div class="modal-row"><span class="label">Fulfillment</span><span class="val">${esc(o.fulfillment||o.method||"—")}</span></div>
       ${o.notes?`<div class="modal-row"><span class="label">Notes</span><span class="val" style="font-size:12px;white-space:pre-wrap;">${esc(o.notes)}</span></div>`:""}
     </div>
