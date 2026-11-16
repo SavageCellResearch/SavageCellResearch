@@ -1040,25 +1040,15 @@ async function sendTracking(id){
   if(!confirm(`Send tracking number "${trackingNumber}" via ${carrier||"carrier"} to ${order.customerEmail}?`)) return;
   try{ await db.collection("orders").doc(id).update({trackingNumber, carrier}); }catch(e){}
   try{
-    const result = await sendWorkerEmail("tracking", {
+    await sendWorkerEmail("tracking", {
       customerName: order.customerName||"Customer",
       customerEmail: order.customerEmail,
       trackingNumber,
       carrier: carrier||"your carrier",
       orderLines: order.lines||order.cartLines||"—",
-      orderTotal: `$${Number(order.total||0).toFixed(2)}`,
-      orderRef: order.orderRef||"",
-      paymentMethod: order.paymentMethod||""
+      orderTotal: `$${Number(order.total||0).toFixed(2)}`
     });
-    let msg = "✅ Tracking email sent!";
-    if(order.paymentMethod==="Credit Card"){
-      if(result && result.thixTracking==="submitted"){
-        msg += "\n\n✅ Tracking also sent to 3thix — card payout will release after delivery checks.";
-      }else{
-        msg += "\n\n⚠️ Tracking could NOT be sent to 3thix" + (result && result.thixTracking ? ` (${result.thixTracking})` : "") + ".\nThe card payout for this order may be held. Contact 3thix support with order ref: " + (order.orderRef||"(none)");
-      }
-    }
-    alert(msg);
+    alert("✅ Tracking email sent!");
   }catch(e){ alert("Failed to send tracking email."); }
 }
 
