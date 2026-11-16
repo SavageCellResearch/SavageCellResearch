@@ -471,9 +471,8 @@
           <button class="f-toggle-btn" data-active="false" data-method="Bitcoin" onclick="setPayment(this)">₿ Bitcoin</button>
           <button class="f-toggle-btn" data-active="false" data-method="USDC" onclick="setPayment(this)">🔷 USDC</button>
           <button class="f-toggle-btn" data-active="false" data-method="Cash" onclick="setPayment(this)" id="cashBtn">💵 Cash</button>
-          <button class="f-toggle-btn" data-active="false" data-method="Credit Card" onclick="setPayment(this)" id="cardBtn" style="display:none;">💳 Credit/Debit Card</button>
+          <button class="f-toggle-btn" data-active="false" data-method="Credit Card" onclick="setPayment(this)" id="cardBtn">💳 Credit/Debit Card</button>
         </div>
-        <div id="cardOnlyShipNote" style="margin-top:6px;font-size:11px;color:var(--muted);">💳 Credit/Debit Card is available for shipped orders. Choose <b>Ship to Me</b> to use it.</div>
         <div id="ccPayNotice" style="display:none;margin-top:8px;padding:12px 14px;border-radius:12px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.35);font-size:12px;color:rgba(242,242,242,.9);line-height:1.7;">
           <b style="font-size:13px;color:#93c5fd;">💳 Paying by Card</b><br/>
           After you submit your order, your confirmation email will include a <b style="color:#fff;">secure Pay Now link</b> for your exact total.<br/>
@@ -866,20 +865,6 @@ function setFulfillment(mode){
   if(cashBtn){
     cashBtn.style.display=mode==="ship"?"none":"block";
     if(mode==="ship"&&state.paymentMethod==="Cash"){state.paymentMethod="";document.querySelectorAll("[data-method]").forEach(b=>b.dataset.active="false");}
-  }
-  // Credit/Debit Card only available for shipping
-  const cardBtn=document.getElementById("cardBtn");
-  const cardNote=document.getElementById("cardOnlyShipNote");
-  if(cardBtn){
-    cardBtn.style.display=mode==="ship"?"block":"none";
-    if(cardNote) cardNote.style.display=mode==="ship"?"none":"block";
-    if(mode!=="ship"&&state.paymentMethod==="Credit Card"){
-      state.paymentMethod="";
-      document.querySelectorAll("[data-method]").forEach(b=>b.dataset.active="false");
-      const ccNotice=document.getElementById("ccPayNotice");
-      if(ccNotice) ccNotice.style.display="none";
-      renderCart();
-    }
   }
 }
 
@@ -1361,7 +1346,6 @@ document.getElementById("submitOrder").addEventListener("click",async()=>{
   if(!phone){statusEl.className="order-status error";statusEl.textContent="Please enter your phone number.";return;}
   if(!state.paymentMethod){statusEl.className="order-status error";statusEl.textContent="Please select a payment method.";return;}
   if(state.cart.size===0){statusEl.className="order-status error";statusEl.textContent="Your cart is empty.";return;}
-  if(state.paymentMethod==="Credit Card"&&state.fulfillment!=="ship"){statusEl.className="order-status error";statusEl.textContent="Credit/Debit Card is only available for shipped orders. Please choose Ship to Me or another payment method.";return;}
   if(state.fulfillment==="ship"&&(!shipStreet||!shipCity||!shipState||!shipZip)){statusEl.className="order-status error";statusEl.textContent="Please fill in all shipping address fields (Street, City, State, ZIP).";return;}
 
   const t=computeTotals();
